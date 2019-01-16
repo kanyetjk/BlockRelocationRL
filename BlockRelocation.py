@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from itertools import permutations
 
 
@@ -117,13 +118,38 @@ class BlockRelocation:
         print(perm.shape)
         return perm
 
+    def is_legal_move(self, first_pos, second_pos):
+        if self.matrix[0, second_pos] > 0:
+            return False
 
+        if not np.any(self.matrix[:, first_pos] > 0):
+            return False
+
+        return True
+
+    def all_legal_moves(self):
+        legal_moves = []
+        for x in range(self.width):
+            for y in range(self.width):
+                if x != y:
+                    if self.is_legal_move(x, y):
+                        legal_moves.append((x, y))
+
+        return legal_moves
+
+    def all_next_states_and_moves(self):
+        saved_matrix = self.matrix.copy()
+        df = pd.DataFrame(columns=["StateRepresentation", "Move"])
+        for move in self.all_legal_moves():
+            self.matrix = saved_matrix.copy()
+            self.move(*move)
+            df = df.append({"StateRepresentation": self.matrix.copy(), "Move": move}, ignore_index=True)
+
+        return df
+
+
+test = BlockRelocation(4, 4)
+test.all_next_states_and_moves()
 # TODO HOW DO I ACTUALLY SAVE THE DATA FOR THE NEURAL NET, CURRENTLY ROW BY ROW AS OPPOSED TO COL BY COL
-import timeit
 
-a = BlockRelocation(5,5,10)
-def test():
-    a.can_remove()
 
-print(timeit.timeit(test, number=100000))
-#a.all_permutations()
