@@ -17,6 +17,7 @@ class BlockRelocation:
         np.random.shuffle(containers)
         containers = containers.reshape(self.height, self.width)
         air = np.zeros((2, self.width))
+        self.height += 2
         return np.concatenate((air, containers), axis=0)
 
     def create_instance(self):
@@ -137,19 +138,45 @@ class BlockRelocation:
 
         return legal_moves
 
-    def all_next_states_and_moves(self):
+    def all_next_states_and_moves(self, env=None):
+        if env is not None:
+            self.matrix = env
+
         saved_matrix = self.matrix.copy()
         df = pd.DataFrame(columns=["StateRepresentation", "Move"])
         for move in self.all_legal_moves():
             self.matrix = saved_matrix.copy()
             self.move(*move)
-            df = df.append({"StateRepresentation": self.matrix.copy(), "Move": move}, ignore_index=True)
+            df = df.append({"StateRepresentation": self.matrix.copy(), "Move": [move]}, ignore_index=True)
+        self.matrix = saved_matrix.copy()
 
         return df
 
+    def all_next_states_n_moves(self, depth):
+        saved_matrix = self.matrix.copy()
+        possible_states = self.all_next_states_and_moves()
+        next_list = []
+        for x in range(1, depth):
+            for i, row in possible_states.iterrows():
+                m = row.StateRepresentation
+                prev_moves = row.Move
+                temp = self.all_next_states_and_moves(env=m.copy())
+                temp["Move"] = (prev_moves + temp.Move).copy()
+                next_list.append(temp)
 
-test = BlockRelocation(4, 4)
-test.all_next_states_and_moves()
+            #  removing duplicate states
+            possible_states = pd.concat(next_list, ignore_index=True)
+            possible_states["dup"] = possible_states.StateRepresentation.astype("str")
+            possible_states = possible_states.drop_duplicates(subset="dup")
+            possible_states = possible_states.drop(columns=["dup"])
+
+        self.matrix = saved_matrix.copy()
+
+        return possible_states
+
+
+test = BlockRelocation(5, 5)
+print(test.all_next_states_n_moves(3))
 # TODO HOW DO I ACTUALLY SAVE THE DATA FOR THE NEURAL NET, CURRENTLY ROW BY ROW AS OPPOSED TO COL BY COL
 
 
