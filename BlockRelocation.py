@@ -175,8 +175,8 @@ class BlockRelocation:
         return possible_states
 
 
-test = BlockRelocation(5, 5)
-print(test.all_next_states_n_moves(3))
+#test = BlockRelocation(5, 5)
+#print(test.all_next_states_n_moves(1))
 # TODO HOW DO I ACTUALLY SAVE THE DATA FOR THE NEURAL NET, CURRENTLY ROW BY ROW AS OPPOSED TO COL BY COL
 
 
