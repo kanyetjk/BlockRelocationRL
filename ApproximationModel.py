@@ -1,0 +1,2 @@
+class ApproximationModel:
+    pass
