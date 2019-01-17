@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 
 class TreeSearch:
@@ -37,3 +38,42 @@ class TreeSearch:
         vector[position] = 1
 
         return vector
+
+    def reverse_hot_one_encoding(self, vector):
+        width = self.env.width - 1
+        position_in_vector = np.argmax(vector)
+        first_pos = position_in_vector // width
+        second_pos = position_in_vector % width
+
+        if second_pos >= first_pos:
+            second_pos += 1
+
+        return first_pos, second_pos
+
+    def move_along_path(self, matrix, path):
+        self.env.matrix = matrix
+        steps_left = len(path)
+        df = pd.DataFrame(columns=["StateRepresentation", "Move", "Value"])
+
+        for move in path:
+            rep = self.env.matrix.copy()
+            move_encoded = self.move_to_hot_one_encoding(move)
+
+            df = df.append({"StateRepresentation": rep, "Move": move_encoded, "value": -steps_left}, ignore_index=True)
+            self.env.move(*move)
+            steps_left -= 1
+
+        return df
+
+
+from BlockRelocation import BlockRelocation
+
+test = TreeSearch(4, BlockRelocation(4,4))
+
+for x in range(4):
+    for y in range(4):
+        if x != y:
+            a = test.move_to_hot_one_encoding((x,y))
+            b = test.reverse_hot_one_encoding(a)
+            if (x,y) != b:
+                print(x,y)
