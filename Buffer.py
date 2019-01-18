@@ -30,3 +30,7 @@ class Buffer:
         y = np.reshape(y, (-1, 1))
 
         return x, y
+
+    def append(self, df):
+        self.storage = self.storage.append(df, ignore_index=True)
+        self.resize()

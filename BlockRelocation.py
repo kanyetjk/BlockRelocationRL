@@ -10,17 +10,19 @@ class BlockRelocation:
         self.height = height
         self.width = width
         self.num_container = num_container
-        self.matrix = self.create_instance_h_2()
+        self.matrix = self.create_instance(self.height, self.width, air=2)
 
-    def create_instance_h_2(self):
+    def create_instance(self, height, width, air=2):
+        self.height = height + air
+        self.width = width
+
         containers = np.arange(1, self.height * self.width + 1)
         np.random.shuffle(containers)
         containers = containers.reshape(self.height, self.width)
-        air = np.zeros((2, self.width))
-        self.height += 2
+        air = np.zeros((air, self.width))
         return np.concatenate((air, containers), axis=0)
 
-    def create_instance(self):
+    def create_instance_random(self):
         containers = list(range(1, self.num_container + 1))
         containers += [0] * ((self.height * self.width) - len(containers))
 
@@ -175,8 +177,8 @@ class BlockRelocation:
         return possible_states
 
 
-#test = BlockRelocation(5, 5)
-#print(test.all_next_states_n_moves(1))
+test = BlockRelocation(10, 10)
+print(test.all_next_states_n_moves(2))
 # TODO HOW DO I ACTUALLY SAVE THE DATA FOR THE NEURAL NET, CURRENTLY ROW BY ROW AS OPPOSED TO COL BY COL
 
 
