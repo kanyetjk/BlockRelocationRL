@@ -1,26 +1,27 @@
 import numpy as np
 import pandas as pd
 from itertools import permutations
+# TODO AIR STUFF
 
 
 class BlockRelocation:
-    __slots__ = ["height", "width", "num_container", "matrix"]
+    __slots__ = ["height", "width", "num_container", "matrix", "air"]
 
-    def __init__(self, height, width, num_container=0):
-        self.height = height
+    def __init__(self, height, width, num_container=0, air=2):
+        self.height = height + air
+        self.air = air
         self.width = width
         self.num_container = num_container
-        self.matrix = self.create_instance(self.height, self.width, air=2)
+        self.matrix = self.create_instance(self.height, self.width)
 
-    def create_instance(self, height, width, air=2):
-        self.height = height + air
+    def create_instance(self, height, width):
         self.width = width
 
-        containers = np.arange(1, self.height * self.width + 1)
+        containers = np.arange(1, (self.height-self.air) * self.width + 1)
         np.random.shuffle(containers)
-        containers = containers.reshape(self.height, self.width)
-        air = np.zeros((air, self.width))
-        return np.concatenate((air, containers), axis=0)
+        containers = containers.reshape((self.height-self.air), self.width)
+        air_rows = np.zeros((self.air, self.width))
+        return np.concatenate((air_rows, containers), axis=0)
 
     def create_instance_random(self):
         containers = list(range(1, self.num_container + 1))
@@ -85,6 +86,8 @@ class BlockRelocation:
             ii += 1
 
         self.matrix[ii - 1, second_pos] = val
+        while self.can_remove():
+            self.remove_container()
 
     def stochastic_greedy_policy(self):
         column_with_one = int(np.where(self.matrix == 1)[1])
@@ -95,7 +98,9 @@ class BlockRelocation:
         return not np.any(self.matrix > 0)
 
     def solve_greedy(self):
+        matrix_copy = self.matrix.copy()
         counter = 0
+        moves = []
         while not self.is_solved():
             if self.can_remove():
                 self.remove_container()
@@ -103,10 +108,12 @@ class BlockRelocation:
 
             with_one = int(np.where(self.matrix == 1)[1])
             goal = self.stochastic_greedy_policy()
+            moves.append((with_one, goal))
 
             self.move(with_one, goal)
             counter += 1
-        return counter
+        self.matrix = matrix_copy.copy()
+        return moves
 
     def all_permutations(self, flatten=None):
         # TODO COULD RETURN AN ITERATOR FOR BETTER SPACE COMPLEXITY
@@ -171,8 +178,12 @@ class BlockRelocation:
         return possible_states
 
 
-test = BlockRelocation(10, 10)
-print(test.all_next_states_n_moves(2))
+#test = BlockRelocation(5, 5)
+#print(test.matrix)
+#a = test.solve_greedy()
+#print(a)
+
+
 # TODO HOW DO I ACTUALLY SAVE THE DATA FOR THE NEURAL NET, CURRENTLY ROW BY ROW AS OPPOSED TO COL BY COL
 
 

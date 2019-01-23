@@ -59,21 +59,26 @@ class TreeSearch:
             rep = self.env.matrix.copy()
             move_encoded = self.move_to_hot_one_encoding(move)
 
-            df = df.append({"StateRepresentation": rep, "Move": move_encoded, "value": -steps_left}, ignore_index=True)
+            df = df.append({"StateRepresentation": rep, "Move": move_encoded, "Value": -steps_left}, ignore_index=True)
             self.env.move(*move)
             steps_left -= 1
 
         return df
 
+    def generate_basic_starting_data(self, num_examples):
+        list_of_dfs = []
+        for _ in range(num_examples):
+            self.env.matrix = self.env.create_instance(6,6)
+            paths = self.env.solve_greedy()
+            df = self.move_along_path(self.env.matrix, paths)
+            list_of_dfs.append(df)
+
+        final_df = pd.concat(list_of_dfs, axis=0,ignore_index=True)
+        return final_df
+
 
 from BlockRelocation import BlockRelocation
 
-test = TreeSearch(4, BlockRelocation(4, 4))
-
-for x in range(4):
-    for y in range(4):
-        if x != y:
-            a = test.move_to_hot_one_encoding((x, y))
-            b = test.reverse_hot_one_encoding(a)
-            if (x, y) != b:
-                print(x, y)
+test = TreeSearch(4, BlockRelocation(6, 6))
+a = test.generate_basic_starting_data(250)
+print(a.shape)

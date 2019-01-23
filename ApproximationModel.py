@@ -58,7 +58,7 @@ class ApproximationModel:
     def input_fn_train(x, y, batch_size=128, num_epochs=1):
         input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': x}, y=y,
-            batch_size=batch_size, num_epochs=100000, shuffle=True)
+            batch_size=batch_size, num_epochs=num_epochs, shuffle=True)
         return input_fn
 
     @staticmethod
@@ -81,7 +81,6 @@ class PolicyNetwork(ApproximationModel):
     def __init__(self):
         super().__init__()
         self.model = tf.estimator.Estimator(self.model_fn, "TBGraphs/")
-        self.model.train(self.input_fn_train(x, y))
 
     def model_fn(self, features, labels, mode):
         pass
@@ -103,28 +102,28 @@ class ValueNetwork(ApproximationModel):
     def model_fn(self, features, labels, mode):
         last_layer = self.build_model_beginning(features)
 
-        logits = self.hidden_layer(n_input=20, n_hidden=1, prev_layer=last_layer, name_scope="output", relu=False)
+        predicted_value = self.hidden_layer(n_input=20, n_hidden=1, prev_layer=last_layer, name_scope="output", relu=False)
 
         if mode == tf.estimator.ModeKeys.PREDICT:
-            return tf.estimator.EstimatorSpec(mode, predictions=logits)
+            return tf.estimator.EstimatorSpec(mode, predictions=predicted_value)
 
         loss_op = tf.losses.mean_squared_error(labels=labels,
-                                               predictions=logits)
+                                               predictions=predicted_value)
 
         optimizer = tf.train.AdamOptimizer(learning_rate=1)
 
         train_op = optimizer.minimize(loss_op, global_step=tf.train.get_global_step())
 
-        acc_op = tf.metrics.mean_absolute_error(labels=labels, predictions=logits)
+        acc_op = tf.metrics.mean_absolute_error(labels=labels, predictions=predicted_value)
 
-        estim_specs = tf.estimator.EstimatorSpec(
+        estimator_specs = tf.estimator.EstimatorSpec(
             mode=mode,
-            predictions=logits,
+            predictions=predicted_value,
             loss=loss_op,
             train_op=train_op,
             eval_metric_ops={'mean_abs_error': acc_op})
 
-        return estim_specs
+        return estimator_specs
 
 
 test = ValueNetwork()
