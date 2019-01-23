@@ -25,7 +25,6 @@ class Optimizer:
             pass
         return data
 
-
     def train(self, next_examples=20, search_depth=3):
         # create training example
         # train on that example

@@ -57,6 +57,7 @@ class BlockRelocation:
                     break
         return False
 
+    # noinspection PyUnboundLocalVariable
     def move(self, first_pos, second_pos):
         # Checking for invalid moves
         if self.matrix[0, second_pos] > 0:
@@ -106,13 +107,6 @@ class BlockRelocation:
             self.move(with_one, goal)
             counter += 1
         return counter
-
-    def stats(self, num):
-        s = []
-        for xx in range(num):
-            self.matrix = self.create_instance()
-            s.append(self.solve_greedy())
-        print(np.mean(s))
 
     def all_permutations(self, flatten=None):
         # TODO COULD RETURN AN ITERATOR FOR BETTER SPACE COMPLEXITY

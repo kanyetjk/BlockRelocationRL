@@ -2,14 +2,17 @@ import tensorflow as tf
 import numpy as np
 
 
+# TODO Load config from json
+
 class ApproximationModel:
     def __init__(self):
+        self.model = None  # TODO?
         pass
-        # TODO
+        # TODO load configs
 
     def build_model_beginning(self, features):
-        X = features["x"]
-        shared_layer = self.sharded_layer(num_columns=2, column_height=5, num_hidden=3, input_tensor=X)
+        input_tensor = features["x"]
+        shared_layer = self.sharded_layer(num_columns=2, column_height=5, num_hidden=3, input_tensor=input_tensor)
         first_layer = self.hidden_layer(n_input=6, n_hidden=20, name_scope="first_connected_layer",
                                         prev_layer=shared_layer)
         second_layer = self.hidden_layer(n_input=20, n_hidden=20, name_scope="second_layer",
@@ -30,7 +33,7 @@ class ApproximationModel:
 
             tensor_list = []
             for x in range(num_columns):
-                col = tf.slice(input_tensor, [0, column_height*x], [1, column_height])
+                col = tf.slice(input_tensor, [0, column_height * x], [1, column_height])
                 name = "column_" + str(x)
                 layer = tf.nn.relu(tf.matmul(col, weights) + biases)
                 next_layer = self.hidden_layer(n_input=num_hidden, n_hidden=3, prev_layer=layer, name_scope=name)
@@ -39,52 +42,68 @@ class ApproximationModel:
             combination_layer = tf.concat(tensor_list, name="Combination", axis=1)
             return combination_layer
 
-    def hidden_layer(self, n_input, n_hidden, prev_layer, name_scope):
+    @staticmethod
+    def hidden_layer(n_input, n_hidden, prev_layer, name_scope, relu=True):
         with tf.name_scope(name_scope):
             bias = tf.Variable(tf.random_normal([n_hidden], dtype=tf.float64))
             weights = tf.Variable(tf.random_normal([n_input, n_hidden], dtype=tf.float64))
-            layer = tf.nn.relu(tf.add(tf.matmul(prev_layer, weights), bias))
+            if relu:
+                layer = tf.nn.relu(tf.add(tf.matmul(prev_layer, weights), bias))
+            else:
+                layer = tf.add(tf.matmul(prev_layer, weights), bias)
         return layer
 
-    def input_fn_train(self,x, y, batch_size=128, num_epochs=1):
+    @staticmethod
+    # TODO set epochs global?
+    def input_fn_train(x, y, batch_size=128, num_epochs=1):
         input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': x}, y=y,
             batch_size=batch_size, num_epochs=100000, shuffle=True)
         return input_fn
 
-    def input_fn_test(self, x):
+    @staticmethod
+    def input_fn_test(x):
         input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': x},
-            batch_size=128, num_epochs=1000, shuffle=True)
+            batch_size=128, num_epochs=1, shuffle=True)
         return input_fn
+
+    def train(self, x, y):
+        # TODO HOOKS?
+        self.model.train(self.input_fn_train(x, y, batch_size=128, num_epochs=2))
+
+    def predict(self, x):
+        # this will be a generator??
+        return self.model.predict(self.input_fn_test(x))
 
 
 class PolicyNetwork(ApproximationModel):
     def __init__(self):
         super().__init__()
-        x = np.array([[0,1,2,3,4,5,6,7,8,9], [0,1,2,3,4,5,6,7,8,9]], dtype=float)
-        y = np.array([[1],[1]], dtype=float)
         self.model = tf.estimator.Estimator(self.model_fn, "TBGraphs/")
         self.model.train(self.input_fn_train(x, y))
+
+    def model_fn(self, features, labels, mode):
+        pass
 
 
 class ValueNetwork(ApproximationModel):
     def __init__(self):
         super().__init__()
-        x = np.array([np.ones(10), np.ones(10)], dtype=float)
-        y = np.array([[1],[1]], dtype=float)
+        x = np.array([[1, 2, 3, 4, 5, 1, 2, 3, 4, 5], np.ones(10)], dtype=float)
+        y = np.array([[1], [1]], dtype=float)
         self.model = tf.estimator.Estimator(self.model_fn, "TBGraphs/")
-        self.model.train(self.input_fn_train(x, y))
-        #a = self.model.predict(self.input_fn_test(x))
-        eval = self.model.evaluate(self.input_fn_train(x, y))
-        print(eval)
+        # self.model.train(self.input_fn_train(x, y))
 
-        #print(list(a))
+        # test = self.model.predict(self.input_fn_test(x))
+        # eval = self.model.evaluate(self.input_fn_train(x, y))
+        # print(eval)
+        # print(list(test))
 
     def model_fn(self, features, labels, mode):
         last_layer = self.build_model_beginning(features)
 
-        logits = tf.nn.relu(self.hidden_layer(n_input=20, n_hidden=1, prev_layer=last_layer, name_scope="output"))
+        logits = self.hidden_layer(n_input=20, n_hidden=1, prev_layer=last_layer, name_scope="output", relu=False)
 
         if mode == tf.estimator.ModeKeys.PREDICT:
             return tf.estimator.EstimatorSpec(mode, predictions=logits)
@@ -109,4 +128,3 @@ class ValueNetwork(ApproximationModel):
 
 
 test = ValueNetwork()
-

@@ -68,12 +68,12 @@ class TreeSearch:
 
 from BlockRelocation import BlockRelocation
 
-test = TreeSearch(4, BlockRelocation(4,4))
+test = TreeSearch(4, BlockRelocation(4, 4))
 
 for x in range(4):
     for y in range(4):
         if x != y:
-            a = test.move_to_hot_one_encoding((x,y))
+            a = test.move_to_hot_one_encoding((x, y))
             b = test.reverse_hot_one_encoding(a)
-            if (x,y) != b:
-                print(x,y)
+            if (x, y) != b:
+                print(x, y)
