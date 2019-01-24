@@ -68,7 +68,7 @@ class TreeSearch:
     def generate_basic_starting_data(self, num_examples):
         list_of_dfs = []
         for _ in range(num_examples):
-            self.env.matrix = self.env.create_instance(6,6)
+            self.env.matrix = self.env.create_instance(4,4)
             paths = self.env.solve_greedy()
             df = self.move_along_path(self.env.matrix, paths)
             list_of_dfs.append(df)
@@ -77,8 +77,9 @@ class TreeSearch:
         return final_df
 
 
-from BlockRelocation import BlockRelocation
+if __name__ == "__main__":
+    from BlockRelocation import BlockRelocation
 
-test = TreeSearch(4, BlockRelocation(6, 6))
-a = test.generate_basic_starting_data(250)
-print(a.shape)
+    test = TreeSearch(4, BlockRelocation(6, 6))
+    a = test.generate_basic_starting_data(250)
+    print(a.shape)

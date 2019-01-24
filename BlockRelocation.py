@@ -178,10 +178,12 @@ class BlockRelocation:
         return possible_states
 
 
-#test = BlockRelocation(5, 5)
-#print(test.matrix)
-#a = test.solve_greedy()
-#print(a)
+if __name__ == "__main__":
+    #test = BlockRelocation(5, 5)
+    #print(test.matrix)
+    #a = test.solve_greedy()
+    #print(a)
+    pass
 
 
 # TODO HOW DO I ACTUALLY SAVE THE DATA FOR THE NEURAL NET, CURRENTLY ROW BY ROW AS OPPOSED TO COL BY COL

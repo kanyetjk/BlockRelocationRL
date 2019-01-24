@@ -1,7 +1,8 @@
 from Buffer import Buffer
 from BlockRelocation import BlockRelocation
 from TreeSearch import TreeSearch
-from ApproximationModel import ApproximationModel
+from ApproximationModel import ValueNetwork
+import numpy as np
 
 
 class Optimizer:
@@ -11,7 +12,7 @@ class Optimizer:
 
         self.buffer = Buffer(size=200000)
         self.env = BlockRelocation(self.height, self.width)
-        self.model = ApproximationModel()
+        self.model = ValueNetwork(height=self.height+2, width=self.width)
         self.tree_searcher = TreeSearch(self.model, BlockRelocation(self.height, self.width))
 
     def create_training_example(self, rows=3, permutations=False):
@@ -25,6 +26,35 @@ class Optimizer:
             pass
         return data
 
+    def warm_start(self):
+        # Here Multiprocessing usefull?
+        examples = self.tree_searcher.generate_basic_starting_data(num_examples=5000)
+        X = examples.StateRepresentation.values
+        X = np.array([x.transpose().flatten()/100 for x in X])
+
+        y = examples.Value
+        y = np.array([np.array([val], dtype=float) for val in y])
+        self.model.train(X, y)
+        #print(X)
+        #print(y)
+        print(X.shape)
+        print(self.model.evaluate(X, y))
+
+    def compare_model(self):
+        examples = self.tree_searcher.generate_basic_starting_data(num_examples=10)
+        X = examples.StateRepresentation.values
+        X = np.array([x.transpose().flatten() / 100 for x in X])
+
+        y = examples.Value
+        y = np.array([np.array([val], dtype=float) for val in y])
+        print(self.model.evaluate(X, y))
+
+        p = list(self.model.predict(X))
+        examples["predicted"] = p
+        print(X[-3].reshape(4,6).transpose())
+        #print(examples.Value)
+        print(examples[["Value", "predicted"]])
+
     def train(self, next_examples=20, search_depth=3):
         # create training example
         # train on that example
@@ -37,3 +67,7 @@ class Optimizer:
 
     def find_fast_solution(self, matrix):
         pass
+
+
+test = Optimizer(4,4)
+test.compare_model()

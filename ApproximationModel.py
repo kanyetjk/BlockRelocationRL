@@ -1,19 +1,23 @@
 import tensorflow as tf
 import numpy as np
 
-
+# TODO Batch size bigger than 1
 # TODO Load config from json
+# Unstable becuase of batch size of 1
 
 class ApproximationModel:
-    def __init__(self):
+    def __init__(self, height, width):
+        self.height = height
+        self.width = width
         self.model = None  # TODO?
         pass
         # TODO load configs
 
     def build_model_beginning(self, features):
         input_tensor = features["x"]
-        shared_layer = self.sharded_layer(num_columns=2, column_height=5, num_hidden=3, input_tensor=input_tensor)
-        first_layer = self.hidden_layer(n_input=6, n_hidden=20, name_scope="first_connected_layer",
+        shared_layer = self.sharded_layer(num_columns=self.width, column_height=self.height, num_hidden=3,
+                                          input_tensor=input_tensor)
+        first_layer = self.hidden_layer(n_input=self.width*3, n_hidden=20, name_scope="first_connected_layer",
                                         prev_layer=shared_layer)
         second_layer = self.hidden_layer(n_input=20, n_hidden=20, name_scope="second_layer",
                                          prev_layer=first_layer)
@@ -55,7 +59,7 @@ class ApproximationModel:
 
     @staticmethod
     # TODO set epochs global?
-    def input_fn_train(x, y, batch_size=128, num_epochs=1):
+    def input_fn_train(x, y, batch_size=1, num_epochs=5):
         input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': x}, y=y,
             batch_size=batch_size, num_epochs=num_epochs, shuffle=True)
@@ -65,16 +69,19 @@ class ApproximationModel:
     def input_fn_test(x):
         input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': x},
-            batch_size=128, num_epochs=1, shuffle=True)
+            batch_size=1, num_epochs=1, shuffle=False)
         return input_fn
 
     def train(self, x, y):
         # TODO HOOKS?
-        self.model.train(self.input_fn_train(x, y, batch_size=128, num_epochs=2))
+        self.model.train(self.input_fn_train(x, y, batch_size=1, num_epochs=2))
 
     def predict(self, x):
         # this will be a generator??
         return self.model.predict(self.input_fn_test(x))
+
+    def evaluate(self, x, y):
+        return self.model.evaluate(self.input_fn_train(x, y, batch_size=1, num_epochs=2))
 
 
 class PolicyNetwork(ApproximationModel):
@@ -87,10 +94,10 @@ class PolicyNetwork(ApproximationModel):
 
 
 class ValueNetwork(ApproximationModel):
-    def __init__(self):
-        super().__init__()
-        x = np.array([[1, 2, 3, 4, 5, 1, 2, 3, 4, 5], np.ones(10)], dtype=float)
-        y = np.array([[1], [1]], dtype=float)
+    def __init__(self, height, width):
+        super().__init__(height, width)
+        #x = np.array([[1, 2, 3, 4, 5, 1, 2, 3, 4, 5], np.ones(10)], dtype=float)
+        #y = np.array([[1], [1]], dtype=float)
         self.model = tf.estimator.Estimator(self.model_fn, "TBGraphs/")
         # self.model.train(self.input_fn_train(x, y))
 
@@ -110,7 +117,7 @@ class ValueNetwork(ApproximationModel):
         loss_op = tf.losses.mean_squared_error(labels=labels,
                                                predictions=predicted_value)
 
-        optimizer = tf.train.AdamOptimizer(learning_rate=1)
+        optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
 
         train_op = optimizer.minimize(loss_op, global_step=tf.train.get_global_step())
 
@@ -126,4 +133,5 @@ class ValueNetwork(ApproximationModel):
         return estimator_specs
 
 
-test = ValueNetwork()
+if __name__ == "__main__":
+    test = ValueNetwork()
