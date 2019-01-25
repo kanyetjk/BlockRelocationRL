@@ -13,12 +13,22 @@ class TreeSearch:
         self.env.matrix = matrix
         path = []
 
-        while not self.env.is_solved():
+        #while not self.env.is_solved():
+        for _ in range(10):
             possible_next_states = self.env.all_next_states_n_moves(depth=search_depth)
-            possible_next_states["StateValue"] = self.model.predict(possible_next_states.StateRepresentation.values)
+            X = possible_next_states.StateRepresentation
+            X = np.array([x.transpose().flatten() / 100 for x in X])
 
-            best_row = possible_next_states.StateValue.argmax()
-            path += best_row.Move[0]
+            values = list(self.model.predict(X))
+            values = [x[0] for x in values]
+
+            possible_next_states["StateValue"] = values
+
+            best_row_index = possible_next_states.StateValue.idxmax()
+            best_row = possible_next_states.loc[best_row_index,:]
+            path.append(best_row.Move[0])
+            print(self.env.matrix)
+            print(best_row.Move[0])
             self.env.move(*best_row.Move[0])
 
         return path

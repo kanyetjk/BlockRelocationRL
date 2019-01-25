@@ -27,18 +27,22 @@ class Optimizer:
         return data
 
     def warm_start(self):
-        # Here Multiprocessing usefull?
-        examples = self.tree_searcher.generate_basic_starting_data(num_examples=5000)
+        examples = self.tree_searcher.generate_basic_starting_data(num_examples=500)
         X = examples.StateRepresentation.values
         X = np.array([x.transpose().flatten()/100 for x in X])
 
         y = examples.Value
         y = np.array([np.array([val], dtype=float) for val in y])
         self.model.train(X, y)
-        #print(X)
-        #print(y)
-        print(X.shape)
-        print(self.model.evaluate(X, y))
+
+        examples_eval = self.tree_searcher.generate_basic_starting_data(num_examples=50)
+        X_eval = examples_eval.StateRepresentation.values
+        X_eval = np.array([x.transpose().flatten()/100 for x in X_eval])
+
+        y_eval = examples_eval.Value
+        y_eval = np.array([np.array([val], dtype=float) for val in y_eval])
+
+        print(self.model.evaluate(X_eval, y_eval))
 
     def compare_model(self):
         examples = self.tree_searcher.generate_basic_starting_data(num_examples=10)
@@ -70,4 +74,6 @@ class Optimizer:
 
 
 test = Optimizer(4,4)
-test.compare_model()
+a = test.tree_searcher.find_path(test.env.create_instance(4,4), search_depth=3)
+#test.compare_model()
+print(a)

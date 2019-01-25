@@ -1,0 +1,24 @@
+Stuff that is still TODO:
+
+Deep Learning Model:
+- Policy Function
+- Combination both models
+- hooks
+
+Environment:
+- Matrix kind of sucks
+- Speed up??
+
+Configs:
+- find usefull configs
+- implement function to load configs and pass to the model
+
+Overall:
+- Documentation
+- Less calls of functions that only call other functions
+
+TreeSearch:
+- DFS
+- BFS
+- Beam Search?
+- Combination of DFS and BFS

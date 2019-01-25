@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from itertools import permutations
 # TODO AIR STUFF
+# DFS no space problem
+# Beam not so good, because only using the value network
 
 
 class BlockRelocation:

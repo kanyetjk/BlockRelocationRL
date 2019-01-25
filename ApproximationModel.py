@@ -3,7 +3,8 @@ import numpy as np
 
 # TODO Batch size bigger than 1
 # TODO Load config from json
-# Unstable becuase of batch size of 1
+# Unstable becuase of batch size of 1 - should be fixed
+
 
 class ApproximationModel:
     def __init__(self, height, width):
@@ -37,7 +38,7 @@ class ApproximationModel:
 
             tensor_list = []
             for x in range(num_columns):
-                col = tf.slice(input_tensor, [0, column_height * x], [1, column_height])
+                col = tf.slice(input_tensor, [0, column_height * x], [-1, column_height])
                 name = "column_" + str(x)
                 layer = tf.nn.relu(tf.matmul(col, weights) + biases)
                 next_layer = self.hidden_layer(n_input=num_hidden, n_hidden=3, prev_layer=layer, name_scope=name)
@@ -69,12 +70,12 @@ class ApproximationModel:
     def input_fn_test(x):
         input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': x},
-            batch_size=1, num_epochs=1, shuffle=False)
+            batch_size=128, num_epochs=1, shuffle=False)
         return input_fn
 
     def train(self, x, y):
         # TODO HOOKS?
-        self.model.train(self.input_fn_train(x, y, batch_size=1, num_epochs=2))
+        self.model.train(self.input_fn_train(x, y, batch_size=128, num_epochs=2))
 
     def predict(self, x):
         # this will be a generator??
