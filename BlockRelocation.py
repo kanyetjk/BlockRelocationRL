@@ -91,13 +91,59 @@ class BlockRelocation:
         while self.can_remove():
             self.remove_container()
 
+    def move_on_matrix(self, matrix, first_pos, second_pos):
+        # TODO NOT GOOD
+        # Checking for invalid moves
+        if matrix[0, second_pos] > 0:
+            return
+
+        if not np.any(matrix[:, first_pos] > 0):
+            return
+
+        # finding the block too move
+
+        for ii in range(self.height):
+            if matrix[ii, first_pos] > 0:
+                val = matrix[ii, first_pos]
+                matrix[ii, first_pos] = 0
+                break
+
+        # inserting the block
+        ii = 0
+        while ii <= self.height - 1 and matrix[ii, second_pos] == 0:
+            ii += 1
+
+        matrix[ii - 1, second_pos] = val
+        while self.can_remove_matrix(matrix):
+            matrix = self.remove_container_from_matrix(matrix)
+
+        return matrix
+
+    def remove_container_from_matrix(self, matrix):
+        matrix = matrix - 1
+        matrix[matrix < 0] = 0
+        return matrix
+
+    def can_remove_matrix(self, matrix):
+        for c in range(self.width):
+            for val in matrix[:, c]:
+                if val == 0:
+                    continue
+                if val == 1:
+                    return True
+                if val > 1:
+                    break
+        return False
+
     def stochastic_greedy_policy(self):
         column_with_one = int(np.where(self.matrix == 1)[1])
         possible_targets = np.setdiff1d(np.where(self.matrix[0, :] == 0), column_with_one)
         return np.random.choice(possible_targets)
 
-    def is_solved(self):
-        return not np.any(self.matrix > 0)
+    def is_solved(self, matrix=None):
+        if matrix is None:
+            matrix = self.matrix
+        return not np.any(matrix > 0)
 
     def solve_greedy(self):
         matrix_copy = self.matrix.copy()
@@ -124,48 +170,56 @@ class BlockRelocation:
         print(perm.shape)
         return perm
 
-    def is_legal_move(self, first_pos, second_pos):
-        if self.matrix[0, second_pos] > 0:
+    def is_legal_move(self, first_pos, second_pos, matrix=None):
+        if matrix is None:
+            matrix = self.matrix
+
+        if matrix[0, second_pos] > 0:
             return False
 
-        if not np.any(self.matrix[:, first_pos] > 0):
+        if not np.any(matrix[:, first_pos] > 0):
             return False
 
         return True
 
-    def all_legal_moves(self):
+    def all_legal_moves(self, matrix):
+        if matrix is None:
+            matrix = self.matrix
+
         legal_moves = []
         for x in range(self.width):
             for y in range(self.width):
                 if x != y:
-                    if self.is_legal_move(x, y):
+                    if self.is_legal_move(x, y, matrix):
                         legal_moves.append((x, y))
 
         return legal_moves
 
-    def all_next_states_and_moves(self, env=None):
-        if env is not None:
-            self.matrix = env
+    def all_next_states_and_moves(self, matrix=None):
+        if matrix is None:
+            matrix = self.matrix
 
-        saved_matrix = self.matrix.copy()
         df = pd.DataFrame(columns=["StateRepresentation", "Move"])
-        for move in self.all_legal_moves():
-            self.matrix = saved_matrix.copy()
-            self.move(*move)
-            df = df.append({"StateRepresentation": self.matrix.copy(), "Move": [move]}, ignore_index=True)
-        self.matrix = saved_matrix.copy()
-
+        for move in self.all_legal_moves(matrix.copy()):
+            temp = self.move_on_matrix(matrix.copy(), *move)
+            if self.is_solved(temp):
+                print(matrix)
+                df = pd.DataFrame(columns=["StateRepresentation", "Move"])
+                df = df.append({"StateRepresentation": matrix.copy(), "Move": [move]}, ignore_index=True)
+            df = df.append({"StateRepresentation": temp.copy(), "Move": [move]}, ignore_index=True)
         return df
 
-    def all_next_states_n_moves(self, depth):
-        saved_matrix = self.matrix.copy()
-        possible_states = self.all_next_states_and_moves()
-        next_list = []
+    def all_next_states_n_moves(self, depth, matrix=None):
+        if matrix is None:
+            matrix = self.matrix
+
+        possible_states = self.all_next_states_and_moves(matrix)
         for x in range(1, depth):
+            next_list = []
             for i, row in possible_states.iterrows():
                 m = row.StateRepresentation
                 prev_moves = row.Move
-                temp = self.all_next_states_and_moves(env=m.copy())
+                temp = self.all_next_states_and_moves(m.copy())
                 temp["Move"] = (prev_moves + temp.Move).copy()
                 next_list.append(temp)
 
@@ -174,8 +228,6 @@ class BlockRelocation:
             possible_states["dup"] = possible_states.StateRepresentation.astype("str")
             possible_states = possible_states.drop_duplicates(subset="dup")
             possible_states = possible_states.drop(columns=["dup"])
-
-        self.matrix = saved_matrix.copy()
 
         return possible_states
 

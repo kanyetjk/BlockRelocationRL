@@ -74,6 +74,6 @@ class Optimizer:
 
 
 test = Optimizer(4,4)
-a = test.tree_searcher.find_path(test.env.create_instance(4,4), search_depth=3)
+a = test.tree_searcher.find_path(test.env.create_instance(4,4), search_depth=4)
 #test.compare_model()
 print(a)

@@ -11,11 +11,12 @@ class TreeSearch:
         # TODO Handle solved
 
         self.env.matrix = matrix
+        while self.env.can_remove_matrix(matrix):
+            matrix = self.env.remove_container_from_matrix(matrix)
         path = []
 
-        #while not self.env.is_solved():
-        for _ in range(10):
-            possible_next_states = self.env.all_next_states_n_moves(depth=search_depth)
+        while not self.env.is_solved(matrix=matrix):
+            possible_next_states = self.env.all_next_states_n_moves(depth=search_depth, matrix=matrix)
             X = possible_next_states.StateRepresentation
             X = np.array([x.transpose().flatten() / 100 for x in X])
 
@@ -27,9 +28,9 @@ class TreeSearch:
             best_row_index = possible_next_states.StateValue.idxmax()
             best_row = possible_next_states.loc[best_row_index,:]
             path.append(best_row.Move[0])
-            print(self.env.matrix)
+            print(matrix)
             print(best_row.Move[0])
-            self.env.move(*best_row.Move[0])
+            matrix = self.env.move_on_matrix(matrix, *best_row.Move[0])
 
         return path
 

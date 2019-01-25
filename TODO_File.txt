@@ -1,6 +1,7 @@
 Stuff that is still TODO:
 
 Deep Learning Model:
+- Change Architecture
 - Policy Function
 - Combination both models
 - hooks
@@ -8,6 +9,7 @@ Deep Learning Model:
 Environment:
 - Matrix kind of sucks
 - Speed up??
+- don't disregard seen states when doing tree search
 
 Configs:
 - find usefull configs
