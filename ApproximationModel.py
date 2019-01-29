@@ -97,15 +97,7 @@ class PolicyNetwork(ApproximationModel):
 class ValueNetwork(ApproximationModel):
     def __init__(self, height, width):
         super().__init__(height, width)
-        #x = np.array([[1, 2, 3, 4, 5, 1, 2, 3, 4, 5], np.ones(10)], dtype=float)
-        #y = np.array([[1], [1]], dtype=float)
         self.model = tf.estimator.Estimator(self.model_fn, "TBGraphs/")
-        # self.model.train(self.input_fn_train(x, y))
-
-        # test = self.model.predict(self.input_fn_test(x))
-        # eval = self.model.evaluate(self.input_fn_train(x, y))
-        # print(eval)
-        # print(list(test))
 
     def model_fn(self, features, labels, mode):
         last_layer = self.build_model_beginning(features)
@@ -132,6 +124,14 @@ class ValueNetwork(ApproximationModel):
             eval_metric_ops={'mean_abs_error': acc_op})
 
         return estimator_specs
+
+    def train_df(self, df):
+        X = df.StateRepresentation.values
+        X = np.array([x.transpose().flatten()/100 for x in X])
+
+        y = df.Value
+        y = np.array([np.array([val], dtype=float) for val in y])
+        self.train(X, y)
 
 
 if __name__ == "__main__":

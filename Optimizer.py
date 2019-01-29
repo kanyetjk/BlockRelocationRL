@@ -15,15 +15,24 @@ class Optimizer:
         self.model = ValueNetwork(height=self.height+2, width=self.width)
         self.tree_searcher = TreeSearch(self.model, BlockRelocation(self.height, self.width))
 
-    def create_training_example(self, rows=3, permutations=False):
-        air = self.height + 2 - rows
-        self.env.create_instance(rows, self.width, air)
-        path = self.tree_searcher.find_path(self.env.matrix.copy(), 3)
+    def create_training_example(self, permutations=False):
+        # TODO ADD MOVES
+        # TODO Needs to stop at some number of moves because it doesn't always solve the problem
+        self.env.create_instance(self.height, self.width)
+        path = self.tree_searcher.find_path(self.env.matrix.copy(), search_depth=4)
         data = self.tree_searcher.move_along_path(self.env.matrix.copy(), path)
+
+        # In case the solver can't solve it with the given depth
+        if data is None:
+            return self.create_training_example(permutations=permutations)
+
+        print(data)
 
         if permutations:
             # TODO create permutations
             pass
+
+        self.model.train_df(data)
         return data
 
     def warm_start(self):
@@ -74,6 +83,7 @@ class Optimizer:
 
 
 test = Optimizer(4,4)
-a = test.tree_searcher.find_path(test.env.create_instance(4,4), search_depth=4)
+#a = test.tree_searcher.find_path(test.env.create_instance(4,4), search_depth=4)
 #test.compare_model()
-print(a)
+test.create_training_example(permutations=False)
+#print(a)

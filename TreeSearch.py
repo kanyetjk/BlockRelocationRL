@@ -15,7 +15,11 @@ class TreeSearch:
             matrix = self.env.remove_container_from_matrix(matrix)
         path = []
 
+        counter = 0
         while not self.env.is_solved(matrix=matrix):
+            counter += 1
+            if counter > 25:
+                return
             possible_next_states = self.env.all_next_states_n_moves(depth=search_depth, matrix=matrix)
             X = possible_next_states.StateRepresentation
             X = np.array([x.transpose().flatten() / 100 for x in X])

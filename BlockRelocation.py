@@ -203,16 +203,16 @@ class BlockRelocation:
         for move in self.all_legal_moves(matrix.copy()):
             temp = self.move_on_matrix(matrix.copy(), *move)
             if self.is_solved(temp):
-                print(matrix)
                 df = pd.DataFrame(columns=["StateRepresentation", "Move"])
                 df = df.append({"StateRepresentation": matrix.copy(), "Move": [move]}, ignore_index=True)
+                return df
             df = df.append({"StateRepresentation": temp.copy(), "Move": [move]}, ignore_index=True)
         return df
 
     def all_next_states_n_moves(self, depth, matrix=None):
         if matrix is None:
             matrix = self.matrix
-
+        seen_states = set()
         possible_states = self.all_next_states_and_moves(matrix)
         for x in range(1, depth):
             next_list = []
@@ -221,13 +221,19 @@ class BlockRelocation:
                 prev_moves = row.Move
                 temp = self.all_next_states_and_moves(m.copy())
                 temp["Move"] = (prev_moves + temp.Move).copy()
+                if temp.shape[0] == 1:
+                    print("_")
+                    return temp
                 next_list.append(temp)
 
             #  removing duplicate states
             possible_states = pd.concat(next_list, ignore_index=True)
+            possible_states["hashed"] = possible_states["StateRepresentation"].apply(lambda x: x.tostring())
+            possible_states = possible_states[~possible_states['hashed'].isin(seen_states)]
             possible_states["dup"] = possible_states.StateRepresentation.astype("str")
             possible_states = possible_states.drop_duplicates(subset="dup")
             possible_states = possible_states.drop(columns=["dup"])
+            seen_states = set(possible_states.hashed.values)
 
         return possible_states
 

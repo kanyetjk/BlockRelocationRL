@@ -9,10 +9,11 @@ Deep Learning Model:
 Environment:
 - Matrix kind of sucks
 - Speed up??
-- don't disregard seen states when doing tree search
+- actually end the function if a solution is found, terminate
+- don't disregard seen states when doing tree search - DONE (maybe not efficient)
 
 Configs:
-- find usefull configs
+- find useful configs
 - implement function to load configs and pass to the model
 
 Overall:
@@ -24,3 +25,7 @@ TreeSearch:
 - BFS
 - Beam Search?
 - Combination of DFS and BFS
+
+Evaluation:
+- Have perfect solutions to test on periodically to measure improvement:
+    - measure: steps to optimality, time, visited nodes
