@@ -11,6 +11,7 @@ class ApproximationModel(object):
         self.height = height
         self.width = width
         self.model = None  # TODO?
+        self.steps_list = []
         pass
         # TODO load configs
 
@@ -89,6 +90,19 @@ class ApproximationModel(object):
     def evaluate(self, x, y):
         return self.model.evaluate(self.input_fn_train(x, y, batch_size=1, num_epochs=2))
 
+    def write_steps_summary(self, steps):
+        self.steps_list.append(steps)
+        if len(self.steps_list) >= 10:
+            average_steps = np.mean(self.steps_list)
+            self.steps_list = []
+            writer = tf.summary.FileWriter('TBGraphs/')
+            summary = tf.Summary()
+            summary.value.add(tag='AverageMoves', simple_value=average_steps)
+            writer.add_summary(summary)
+
+            writer.flush()
+            writer.close()
+
 
 class PolicyNetwork(ApproximationModel):
     def __init__(self):
@@ -142,4 +156,4 @@ class ValueNetwork(ApproximationModel):
 
 
 if __name__ == "__main__":
-    test = ValueNetwork()
+    test = ValueNetwork(4,4)
