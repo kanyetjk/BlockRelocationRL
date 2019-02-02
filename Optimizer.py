@@ -2,51 +2,92 @@ from Buffer import Buffer
 from BlockRelocation import BlockRelocation
 from TreeSearch import TreeSearch
 from ApproximationModel import ValueNetwork
+from Utils import load_configs
+
 import numpy as np
+import pandas as pd
 
 
 class Optimizer:
-    def __init__(self, width=4, height=4):
-        self.width = width
-        self.height = height
+    def __init__(self):
+        configs = load_configs()
+        self.width = configs["width"]
+        self.height = configs["height"]
+        self.buffer_size = configs["buffer_size"]
 
-        self.buffer = Buffer(size=200000)
+        self.buffer = Buffer(self.buffer_size)
         self.env = BlockRelocation(self.height, self.width)
-        self.model = ValueNetwork(height=self.height+2, width=self.width)
+        self.model = ValueNetwork(height=self.height + 2, width=self.width)
         self.tree_searcher = TreeSearch(self.model, BlockRelocation(self.height, self.width))
 
     def create_training_example(self, permutations=False):
-        # TODO ADD MOVES
         # TODO Needs to stop at some number of moves because it doesn't always solve the problem
-        self.env.create_instance(self.height, self.width)
+        self.env.matrix = self.env.create_instance(self.height, self.width)
         path = self.tree_searcher.find_path(self.env.matrix.copy(), search_depth=4)
-        data = self.tree_searcher.move_along_path(self.env.matrix.copy(), path)
 
-        # In case the solver can't solve it with the given depth
-        if data is None:
+        # In case the solver can't solve it with the given depth, this function is called again
+        if path is None:
             return self.create_training_example(permutations=permutations)
 
-        print(data)
+        data = self.tree_searcher.move_along_path(self.env.matrix.copy(), path)
 
         if permutations:
-            # TODO create permutations
-            pass
+            data = self.create_permutations(data)
+            print(data.shape)
 
         self.model.train_df(data)
         return data
 
+    def train_on_new_instances(self, num=10):
+        for _ in range(num):
+            self.create_training_example(permutations=True)
+
+    def create_permutations(self, df):
+        df_list = []
+        for i, row in df.iterrows():
+            # creating representations
+            rep = self.env.all_permutations_state(row.StateRepresentation)
+            rep = [x.transpose().flatten() / 100 for x in rep]
+
+            # creating value column
+            val = [np.array(row.Value) for _ in range(len(rep))]
+
+            # creating move and move_encoded columns
+            moves = self.env.all_permutations_move(*row.Move)
+            encoded = [self.tree_searcher.move_to_hot_one_encoding(m) for m in moves]
+
+            # creating the DataFrame
+            temp_df = pd.DataFrame({"StateRepresentation": rep, "Value": val, "Moves": moves, "MovesEncoded": encoded})
+
+            # removing duplicates
+            temp_df["hashable_state"] = temp_df.StateRepresentation.apply(lambda x: x.tostring())
+            temp_df = temp_df.drop_duplicates(subset="hashable_state")
+            temp_df = temp_df.drop(columns="hashable_state")
+
+            df_list.append(temp_df)
+
+        final_df = pd.concat(df_list, ignore_index=True)
+        return final_df
+
     def warm_start(self):
-        examples = self.tree_searcher.generate_basic_starting_data(num_examples=500)
+        examples = self.tree_searcher.generate_basic_starting_data(num_examples=1)
+
+        examples = self.create_permutations(examples)
+        #return
         X = examples.StateRepresentation.values
-        X = np.array([x.transpose().flatten()/100 for x in X])
+        X = np.array([x.transpose().flatten() / 100 for x in X])
+        #X = np.array([np.array(x) for x in X])
 
         y = examples.Value
         y = np.array([np.array([val], dtype=float) for val in y])
+        #y = np.array([np.array([t]) for t in y])
+
+        return
         self.model.train(X, y)
 
         examples_eval = self.tree_searcher.generate_basic_starting_data(num_examples=50)
         X_eval = examples_eval.StateRepresentation.values
-        X_eval = np.array([x.transpose().flatten()/100 for x in X_eval])
+        X_eval = np.array([x.transpose().flatten() / 100 for x in X_eval])
 
         y_eval = examples_eval.Value
         y_eval = np.array([np.array([val], dtype=float) for val in y_eval])
@@ -64,8 +105,8 @@ class Optimizer:
 
         p = list(self.model.predict(X))
         examples["predicted"] = p
-        print(X[-3].reshape(4,6).transpose())
-        #print(examples.Value)
+        print(X[-3].reshape(4, 6).transpose())
+        # print(examples.Value)
         print(examples[["Value", "predicted"]])
 
     def train(self, next_examples=20, search_depth=3):
@@ -82,8 +123,10 @@ class Optimizer:
         pass
 
 
-test = Optimizer(4,4)
-#a = test.tree_searcher.find_path(test.env.create_instance(4,4), search_depth=4)
-#test.compare_model()
-test.create_training_example(permutations=False)
-#print(a)
+test = Optimizer()
+# a = test.tree_searcher.find_path(test.env.create_instance(4,4), search_depth=4)
+# test.compare_model()
+#test.create_training_example(permutations=True)
+test.train_on_new_instances(10)
+#test.warm_start()
+# print(a)

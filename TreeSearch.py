@@ -20,17 +20,16 @@ class TreeSearch:
             counter += 1
             if counter > 25:
                 return
-            possible_next_states = self.env.all_next_states_n_moves(depth=search_depth, matrix=matrix)
-            X = possible_next_states.StateRepresentation
-            X = np.array([x.transpose().flatten() / 100 for x in X])
 
-            values = list(self.model.predict(X))
+            # predicting values of the states
+            possible_next_states = self.env.all_next_states_n_moves(depth=search_depth, matrix=matrix)
+            values = list(self.model.predict_df(possible_next_states))
             values = [x[0] for x in values]
 
             possible_next_states["StateValue"] = values
 
             best_row_index = possible_next_states.StateValue.idxmax()
-            best_row = possible_next_states.loc[best_row_index,:]
+            best_row = possible_next_states.loc[best_row_index, :]
             path.append(best_row.Move[0])
             print(matrix)
             print(best_row.Move[0])
@@ -72,9 +71,8 @@ class TreeSearch:
 
         for move in path:
             rep = self.env.matrix.copy()
-            move_encoded = self.move_to_hot_one_encoding(move)
 
-            df = df.append({"StateRepresentation": rep, "Move": move_encoded, "Value": -steps_left}, ignore_index=True)
+            df = df.append({"StateRepresentation": rep, "Move": move, "Value": -steps_left}, ignore_index=True)
             self.env.move(*move)
             steps_left -= 1
 
@@ -83,12 +81,12 @@ class TreeSearch:
     def generate_basic_starting_data(self, num_examples):
         list_of_dfs = []
         for _ in range(num_examples):
-            self.env.matrix = self.env.create_instance(4,4)
+            self.env.matrix = self.env.create_instance(4, 4)
             paths = self.env.solve_greedy()
             df = self.move_along_path(self.env.matrix, paths)
             list_of_dfs.append(df)
 
-        final_df = pd.concat(list_of_dfs, axis=0,ignore_index=True)
+        final_df = pd.concat(list_of_dfs, axis=0, ignore_index=True)
         return final_df
 
 

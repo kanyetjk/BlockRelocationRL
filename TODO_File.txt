@@ -11,6 +11,9 @@ Environment:
 - Speed up??
 - actually end the function if a solution is found, terminate
 - don't disregard seen states when doing tree search - DONE (maybe not efficient)
+- Create a dictionary for one-hot-encoding and reverse for improved speed - or create a cache for the function
+- When solving, needs to save the progress it made and not discard it somehow
+- Find a way to remove those stupid loops
 
 Configs:
 - find useful configs
@@ -19,6 +22,9 @@ Configs:
 Overall:
 - Documentation
 - Less calls of functions that only call other functions
+
+Optimizer:
+- write to the Buffer
 
 TreeSearch:
 - DFS

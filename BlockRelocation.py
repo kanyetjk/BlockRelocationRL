@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from itertools import permutations
+
+
 # TODO AIR STUFF
 # DFS no space problem
 # Beam not so good, because only using the value network
@@ -19,9 +21,9 @@ class BlockRelocation:
     def create_instance(self, height, width):
         self.width = width
 
-        containers = np.arange(1, (self.height-self.air) * self.width + 1)
+        containers = np.arange(1, (self.height - self.air) * self.width + 1)
         np.random.shuffle(containers)
-        containers = containers.reshape((self.height-self.air), self.width)
+        containers = containers.reshape((self.height - self.air), self.width)
         air_rows = np.zeros((self.air, self.width))
         return np.concatenate((air_rows, containers), axis=0)
 
@@ -163,12 +165,25 @@ class BlockRelocation:
         self.matrix = matrix_copy.copy()
         return moves
 
-    def all_permutations(self, flatten=None):
+    def all_permutations_state(self, matrix=None, flatten=None):
         # TODO COULD RETURN AN ITERATOR FOR BETTER SPACE COMPLEXITY
-        transposed_matrix = self.matrix.transpose()
+        if matrix is None:
+            matrix = self.matrix
+
+        transposed_matrix = matrix.transpose()
         perm = np.array([np.array(p).transpose().flatten() for p in permutations(transposed_matrix)])
-        print(perm.shape)
         return perm
+
+    def all_permutations_move(self, pos1, pos2):
+        x = list(range(self.width))
+        all_permutations = []
+        b = permutations(x)
+        for perm in b:
+            new_pos1 = perm.index(pos1)
+            new_pos2 = perm.index(pos2)
+            all_permutations.append((new_pos1, new_pos2))
+
+        return all_permutations
 
     def is_legal_move(self, first_pos, second_pos, matrix=None):
         if matrix is None:
@@ -239,13 +254,12 @@ class BlockRelocation:
 
 
 if __name__ == "__main__":
-    #test = BlockRelocation(5, 5)
-    #print(test.matrix)
-    #a = test.solve_greedy()
-    #print(a)
+    test = BlockRelocation(4, 4)
+    print(len(test.all_permutations_move(0, 1)))
+    print(len(test.all_permutations_state()))
+    # print(test.matrix)
+    # a = test.solve_greedy()
+    # print(a)
     pass
 
-
 # TODO HOW DO I ACTUALLY SAVE THE DATA FOR THE NEURAL NET, CURRENTLY ROW BY ROW AS OPPOSED TO COL BY COL
-
-

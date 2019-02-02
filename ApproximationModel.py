@@ -1,12 +1,12 @@
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
+
 
 # TODO Batch size bigger than 1
 # TODO Load config from json
-# Unstable becuase of batch size of 1 - should be fixed
 
 
-class ApproximationModel:
+class ApproximationModel(object):
     def __init__(self, height, width):
         self.height = height
         self.width = width
@@ -18,7 +18,7 @@ class ApproximationModel:
         input_tensor = features["x"]
         shared_layer = self.sharded_layer(num_columns=self.width, column_height=self.height, num_hidden=3,
                                           input_tensor=input_tensor)
-        first_layer = self.hidden_layer(n_input=self.width*3, n_hidden=20, name_scope="first_connected_layer",
+        first_layer = self.hidden_layer(n_input=self.width * 3, n_hidden=20, name_scope="first_connected_layer",
                                         prev_layer=shared_layer)
         second_layer = self.hidden_layer(n_input=20, n_hidden=20, name_scope="second_layer",
                                          prev_layer=first_layer)
@@ -77,6 +77,11 @@ class ApproximationModel:
         # TODO HOOKS?
         self.model.train(self.input_fn_train(x, y, batch_size=128, num_epochs=2))
 
+    def predict_df(self, x):
+        X = x.StateRepresentation
+        X = np.array([x.transpose().flatten() / 100 for x in X])
+        return self.predict(X)
+
     def predict(self, x):
         # this will be a generator??
         return self.model.predict(self.input_fn_test(x))
@@ -102,7 +107,8 @@ class ValueNetwork(ApproximationModel):
     def model_fn(self, features, labels, mode):
         last_layer = self.build_model_beginning(features)
 
-        predicted_value = self.hidden_layer(n_input=20, n_hidden=1, prev_layer=last_layer, name_scope="output", relu=False)
+        predicted_value = self.hidden_layer(n_input=20, n_hidden=1, prev_layer=last_layer, name_scope="output",
+                                            relu=False)
 
         if mode == tf.estimator.ModeKeys.PREDICT:
             return tf.estimator.EstimatorSpec(mode, predictions=predicted_value)
@@ -127,7 +133,8 @@ class ValueNetwork(ApproximationModel):
 
     def train_df(self, df):
         X = df.StateRepresentation.values
-        X = np.array([x.transpose().flatten()/100 for x in X])
+        X = np.array([np.array(x) for x in X])
+        #X = np.array([x.transpose().flatten() / 100 for x in X])
 
         y = df.Value
         y = np.array([np.array([val], dtype=float) for val in y])
