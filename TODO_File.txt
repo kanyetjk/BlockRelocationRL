@@ -2,29 +2,35 @@ Stuff that is still TODO:
 
 Deep Learning Model:
 - Change Architecture
-- Policy Function
+- Make Model Architecture dynamic
 - Combination both models
 - hooks
+- add epsilon to policy outout -> transform back into moves, choose threshold
 
 Environment:
 - Matrix kind of sucks
 - Speed up??
 - actually end the function if a solution is found, terminate
 - don't disregard seen states when doing tree search - DONE (maybe not efficient)
-- Create a dictionary for one-hot-encoding and reverse for improved speed - or create a cache for the function
+- Create a dictionary for one-hot-encoding and reverse for improved speed - or create a cache for the function DONE- have cache size dynamic?
 - When solving, needs to save the progress it made and not discard it somehow
 - Find a way to remove those stupid loops
+- Something fishy when solved, returns too many moves
+- When multiple moves lead to the solution take that into account for training the policy network
 
 Configs:
-- find useful configs
-- implement function to load configs and pass to the model
+- find useful configs, mostly done
 
 Overall:
 - Documentation
 - Less calls of functions that only call other functions
 
+Buffer:
+- write size and max size to tensorboard
+
 Optimizer:
-- write to the Buffer
+- Read from the Buffer
+- Have a global step
 
 TreeSearch:
 - DFS

@@ -19,9 +19,9 @@ class ApproximationModel(object):
         input_tensor = features["x"]
         shared_layer = self.sharded_layer(num_columns=self.width, column_height=self.height, num_hidden=3,
                                           input_tensor=input_tensor)
-        first_layer = self.hidden_layer(n_input=self.width * 3, n_hidden=20, name_scope="first_connected_layer",
+        first_layer = self.hidden_layer(n_input=self.width * 3, n_hidden=100, name_scope="first_connected_layer",
                                         prev_layer=shared_layer)
-        second_layer = self.hidden_layer(n_input=20, n_hidden=20, name_scope="second_layer",
+        second_layer = self.hidden_layer(n_input=100, n_hidden=100, name_scope="second_layer",
                                          prev_layer=first_layer)
         return second_layer
 
@@ -91,8 +91,10 @@ class ApproximationModel(object):
         return self.model.evaluate(self.input_fn_train(x, y, batch_size=1, num_epochs=2))
 
     def write_steps_summary(self, steps):
+        # TODO CHANGE BACK TO 10
         self.steps_list.append(steps)
-        if len(self.steps_list) >= 10:
+        if len(self.steps_list) >= 1:
+            print(steps)
             average_steps = np.mean(self.steps_list)
             self.steps_list = []
             writer = tf.summary.FileWriter('TBGraphs/')
@@ -105,12 +107,55 @@ class ApproximationModel(object):
 
 
 class PolicyNetwork(ApproximationModel):
-    def __init__(self):
-        super().__init__()
-        self.model = tf.estimator.Estimator(self.model_fn, "TBGraphs/")
+    def __init__(self, height, width):
+        super().__init__(height, width)
+        self.model = tf.estimator.Estimator(self.model_fn, "GraphPN/")
+
+    def train_df(self, df):
+        X = df.StateRepresentation.values
+        X = np.array([np.array(x) for x in X])
+
+        y = df.MovesEncoded
+        y = np.array([np.array(val, dtype=float) for val in y])
+        self.train(X, y)
+
+    def input_fn_train(self, x, y, batch_size=128, num_epochs=1):
+        input_fn = tf.estimator.inputs.numpy_input_fn(
+            x={'x': x}, y=y,
+            batch_size=batch_size, num_epochs=num_epochs, shuffle=True)
+        return input_fn
+
+    def train(self, x, y):
+        self.model.train(self.input_fn_train(x, y))
 
     def model_fn(self, features, labels, mode):
-        pass
+        # TODO NOT CLEAR WITH THE OUTPUT
+        last_layer = self.build_model_beginning(features)
+
+        num_output = self.width * (self.width-1)
+        output_layer = self.hidden_layer(n_input=100, n_hidden=num_output, prev_layer=last_layer, name_scope="output",
+                                         relu=False)
+
+        percent_output = tf.nn.softmax(output_layer)
+
+        if mode == tf.estimator.ModeKeys.PREDICT:
+            return tf.estimator.EstimatorSpec(mode, predictions=percent_output)
+
+        loss_op = tf.losses.softmax_cross_entropy(onehot_labels=labels, logits=percent_output)
+
+        optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
+
+        train_op = optimizer.minimize(loss_op, global_step=tf.train.get_global_step())
+
+        acc_op = tf.losses.softmax_cross_entropy(onehot_labels=labels, logits=percent_output)
+
+        estimator_specs = tf.estimator.EstimatorSpec(
+            mode=mode,
+            predictions=percent_output,
+            loss=loss_op,
+            train_op=train_op)
+
+        return estimator_specs
 
 
 class ValueNetwork(ApproximationModel):
@@ -121,7 +166,7 @@ class ValueNetwork(ApproximationModel):
     def model_fn(self, features, labels, mode):
         last_layer = self.build_model_beginning(features)
 
-        predicted_value = self.hidden_layer(n_input=20, n_hidden=1, prev_layer=last_layer, name_scope="output",
+        predicted_value = self.hidden_layer(n_input=100, n_hidden=1, prev_layer=last_layer, name_scope="output",
                                             relu=False)
 
         if mode == tf.estimator.ModeKeys.PREDICT:
@@ -156,4 +201,4 @@ class ValueNetwork(ApproximationModel):
 
 
 if __name__ == "__main__":
-    test = ValueNetwork(4,4)
+    test = PolicyNetwork(4,4)

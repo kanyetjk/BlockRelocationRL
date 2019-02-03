@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from functools import lru_cache
 
 
 class TreeSearch:
@@ -7,7 +8,7 @@ class TreeSearch:
         self.model = model
         self.env = block_relocation
 
-    def find_path(self, matrix, search_depth=3):
+    def find_path(self, matrix, search_depth=3, moves_per_turn=2):
         # TODO Handle solved
 
         self.env.matrix = matrix
@@ -17,8 +18,7 @@ class TreeSearch:
 
         counter = 0
         while not self.env.is_solved(matrix=matrix):
-            counter += 1
-            if counter > 25:
+            if counter > 20:
                 return
 
             # predicting values of the states
@@ -30,13 +30,17 @@ class TreeSearch:
 
             best_row_index = possible_next_states.StateValue.idxmax()
             best_row = possible_next_states.loc[best_row_index, :]
-            path.append(best_row.Move[0])
-            print(matrix)
-            print(best_row.Move[0])
-            matrix = self.env.move_on_matrix(matrix, *best_row.Move[0])
+            for x in range(min(moves_per_turn, len(best_row.Move))):
+                counter += 1
+                if not self.env.is_solved(matrix=matrix):
+                    path.append(best_row.Move[x])
+                    print(matrix)
+                    print(best_row.Move[x])
+                    matrix = self.env.move_on_matrix(matrix, *best_row.Move[x])
 
         return path
 
+    @lru_cache(maxsize=900)
     def move_to_hot_one_encoding(self, move):
         # (0,1), (0,2), (1,0), (1,2), (2,0), (2,1)
         width = self.env.width
@@ -53,6 +57,7 @@ class TreeSearch:
 
         return vector
 
+    @lru_cache(maxsize=900)
     def reverse_hot_one_encoding(self, vector):
         width = self.env.width - 1
         position_in_vector = np.argmax(vector)
@@ -79,6 +84,7 @@ class TreeSearch:
         return df
 
     def generate_basic_starting_data(self, num_examples):
+        # TODO Currently hardcoded
         list_of_dfs = []
         for _ in range(num_examples):
             self.env.matrix = self.env.create_instance(4, 4)

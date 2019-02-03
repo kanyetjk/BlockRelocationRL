@@ -3,6 +3,11 @@
   "height": 4,
 
   "buffer_size": 2000000,
+  "buffer_increase": 0.02,
+
+  "simulations_per_training": 20,
+  "percent_of_simulation": 0.1,
+  "percent_of_buffer": 0.05,
 
   "exp_name": "example",
   "num_epochs": 10,
@@ -11,5 +16,8 @@
   "batch_size": 128,
   "beta1": 0.9,
   "beta2": 0.999,
-  "epsilon": 1e-08
+  "epsilon": 1e-08,
+
+  "shared_weights": [3, 3],
+  "fully_connected": [200, 200, 200]
 }

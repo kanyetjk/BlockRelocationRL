@@ -1,8 +1,9 @@
 from Buffer import Buffer
 from BlockRelocation import BlockRelocation
 from TreeSearch import TreeSearch
-from ApproximationModel import ValueNetwork
+from ApproximationModel import ValueNetwork, PolicyNetwork
 from Utils import load_configs
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -18,6 +19,7 @@ class Optimizer:
         self.buffer = Buffer(self.buffer_size)
         self.env = BlockRelocation(self.height, self.width)
         self.model = ValueNetwork(height=self.height + 2, width=self.width)
+        self.policy_network = PolicyNetwork(height=self.height + 2, width=self.width)
         self.tree_searcher = TreeSearch(self.model, BlockRelocation(self.height, self.width))
 
     def create_training_example(self, permutations=False):
@@ -35,12 +37,27 @@ class Optimizer:
             data = self.create_permutations(data)
             print(data.shape)
 
-        self.model.train_df(data)
-        return data
+        return data, len(path)
 
-    def train_on_new_instances(self, num=10):
+    def train_on_new_instances(self, num=1):
+        data_list = []
+        step_list = []
         for _ in range(num):
-            self.create_training_example(permutations=True)
+            data, steps = self.create_training_example(permutations=True)
+            data_list.append(data)
+            step_list.append(steps)
+
+        data = pd.concat(data_list, ignore_index=True, sort=False)
+        mean_steps = np.mean(step_list)
+
+        train_data = data.sample(int(data.shape[0]/10))  # Hardcoded
+        data = data.drop(train_data.index)
+
+        self.model.train_df(data)
+        self.policy_network.train_df(data)
+        self.model.write_steps_summary(mean_steps)
+
+        self.buffer.append(data)
 
     def create_permutations(self, df):
         df_list = []
@@ -70,19 +87,14 @@ class Optimizer:
         return final_df
 
     def warm_start(self):
-        examples = self.tree_searcher.generate_basic_starting_data(num_examples=1)
+        examples = self.tree_searcher.generate_basic_starting_data(num_examples=500)
 
-        examples = self.create_permutations(examples)
-        #return
         X = examples.StateRepresentation.values
         X = np.array([x.transpose().flatten() / 100 for x in X])
-        #X = np.array([np.array(x) for x in X])
 
         y = examples.Value
         y = np.array([np.array([val], dtype=float) for val in y])
-        #y = np.array([np.array([t]) for t in y])
 
-        return
         self.model.train(X, y)
 
         examples_eval = self.tree_searcher.generate_basic_starting_data(num_examples=50)
@@ -122,11 +134,15 @@ class Optimizer:
     def find_fast_solution(self, matrix):
         pass
 
+    def start_network(self):
+        for x in range(20):
+            self.warm_start()
 
-test = Optimizer()
-# a = test.tree_searcher.find_path(test.env.create_instance(4,4), search_depth=4)
-# test.compare_model()
-#test.create_training_example(permutations=True)
-test.train_on_new_instances(10)
-#test.warm_start()
-# print(a)
+
+if __name__ == "__main__":
+    test = Optimizer()
+    #test.warm_start()
+    #test.create_training_example(permutations=True)
+    test.train_on_new_instances(3)
+    #test.warm_start()
+    #test.start_network()
