@@ -2,7 +2,7 @@
   "width": 4,
   "height": 4,
 
-  "buffer_size": 2000000,
+  "buffer_size": 20000,
   "buffer_increase": 0.02,
 
   "simulations_per_training": 20,

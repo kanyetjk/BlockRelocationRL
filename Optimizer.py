@@ -3,7 +3,6 @@ from BlockRelocation import BlockRelocation
 from TreeSearch import TreeSearch
 from ApproximationModel import ValueNetwork, PolicyNetwork
 from Utils import load_configs
-import pickle
 
 import numpy as np
 import pandas as pd
@@ -20,37 +19,47 @@ class Optimizer:
         self.env = BlockRelocation(self.height, self.width)
         self.model = ValueNetwork(height=self.height + 2, width=self.width)
         self.policy_network = PolicyNetwork(height=self.height + 2, width=self.width)
-        self.tree_searcher = TreeSearch(self.model, BlockRelocation(self.height, self.width))
+        self.tree_searcher = TreeSearch(self.model, BlockRelocation(self.height, self.width), self.policy_network)
 
     def create_training_example(self, permutations=False):
-        # TODO Needs to stop at some number of moves because it doesn't always solve the problem
         self.env.matrix = self.env.create_instance(self.height, self.width)
         path = self.tree_searcher.find_path(self.env.matrix.copy(), search_depth=4)
 
         # In case the solver can't solve it with the given depth, this function is called again
         if path is None:
+            print("Could not solve")
             return self.create_training_example(permutations=permutations)
 
         data = self.tree_searcher.move_along_path(self.env.matrix.copy(), path)
 
         if permutations:
             data = self.create_permutations(data)
-            print(data.shape)
+            #print(data.shape)
 
         return data, len(path)
+
+    def reinforce(self, iterations=10):
+        for x in range(iterations):
+            print("Iteration " + str(x))
+            self.train_on_new_instances(10)
+            old_sample = self.buffer.get_sample(4000, remove=True)
+            self.model.train_df(old_sample)
+            self.policy_network.train_df(old_sample)
 
     def train_on_new_instances(self, num=1):
         data_list = []
         step_list = []
-        for _ in range(num):
+
+        for ii in range(num):
             data, steps = self.create_training_example(permutations=True)
             data_list.append(data)
             step_list.append(steps)
+            print("solved " + str(ii+1))
 
         data = pd.concat(data_list, ignore_index=True, sort=False)
         mean_steps = np.mean(step_list)
 
-        train_data = data.sample(int(data.shape[0]/10))  # Hardcoded
+        train_data = data.sample(int(data.shape[0]/5))  # Hardcoded
         data = data.drop(train_data.index)
 
         self.model.train_df(data)
@@ -143,6 +152,7 @@ if __name__ == "__main__":
     test = Optimizer()
     #test.warm_start()
     #test.create_training_example(permutations=True)
-    test.train_on_new_instances(3)
+    #test.train_on_new_instances(3)
     #test.warm_start()
     #test.start_network()
+    test.reinforce(5)

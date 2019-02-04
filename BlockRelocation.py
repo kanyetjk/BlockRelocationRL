@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from itertools import permutations
+import timeit
 
 
 # TODO AIR STUFF
@@ -78,11 +79,6 @@ class BlockRelocation:
                 val = self.matrix[ii, first_pos]
                 self.matrix[ii, first_pos] = 0
                 break
-        """
-        ii = np.argmax(self.matrix[:, first_pos] > 0)
-        val = self.matrix[ii, first_pos]
-        self.matrix[ii, first_pos] = 0
-        """
 
         # inserting the block
         ii = 0
@@ -95,13 +91,6 @@ class BlockRelocation:
 
     def move_on_matrix(self, matrix, first_pos, second_pos):
         # TODO NOT GOOD
-        # Checking for invalid moves
-        if matrix[0, second_pos] > 0:
-            return
-
-        if not np.any(matrix[:, first_pos] > 0):
-            return
-
         # finding the block too move
 
         for ii in range(self.height):
@@ -127,14 +116,14 @@ class BlockRelocation:
         return matrix
 
     def can_remove_matrix(self, matrix):
-        for c in range(self.width):
-            for val in matrix[:, c]:
-                if val == 0:
-                    continue
-                if val == 1:
-                    return True
-                if val > 1:
-                    break
+        if np.max(matrix) == 0:
+            return False
+        c = int(np.where(matrix == 1)[1])
+        for val in matrix[:, c]:
+            if val == 1:
+                return True
+            if val > 1:
+                return False
         return False
 
     def stochastic_greedy_policy(self):
@@ -214,14 +203,16 @@ class BlockRelocation:
         if matrix is None:
             matrix = self.matrix
 
-        df = pd.DataFrame(columns=["StateRepresentation", "Move"])
+        df_list = []
         for move in self.all_legal_moves(matrix.copy()):
             temp = self.move_on_matrix(matrix.copy(), *move)
             if self.is_solved(temp):
                 df = pd.DataFrame(columns=["StateRepresentation", "Move"])
                 df = df.append({"StateRepresentation": matrix.copy(), "Move": [move]}, ignore_index=True)
                 return df
-            df = df.append({"StateRepresentation": temp.copy(), "Move": [move]}, ignore_index=True)
+
+            df_list.append({"StateRepresentation": temp.copy(), "Move": [move]})
+        df = pd.DataFrame(df_list)
         return df
 
     def all_next_states_n_moves(self, depth, matrix=None):
@@ -237,7 +228,7 @@ class BlockRelocation:
                 temp = self.all_next_states_and_moves(m.copy())
                 temp["Move"] = (prev_moves + temp.Move).copy()
                 if temp.shape[0] == 1:
-                    print("_")
+                    #print("solved_fully")
                     return temp
                 next_list.append(temp)
 
@@ -245,21 +236,21 @@ class BlockRelocation:
             possible_states = pd.concat(next_list, ignore_index=True)
             possible_states["hashed"] = possible_states["StateRepresentation"].apply(lambda x: x.tostring())
             possible_states = possible_states[~possible_states['hashed'].isin(seen_states)]
-            possible_states["dup"] = possible_states.StateRepresentation.astype("str")
-            possible_states = possible_states.drop_duplicates(subset="dup")
-            possible_states = possible_states.drop(columns=["dup"])
+            possible_states = possible_states.drop_duplicates(subset="hashed")
+
             seen_states = set(possible_states.hashed.values)
+            possible_states = possible_states.drop(columns=["hashed"])
 
         return possible_states
 
 
 if __name__ == "__main__":
-    test = BlockRelocation(4, 4)
-    print(len(test.all_permutations_move(0, 1)))
-    print(len(test.all_permutations_state()))
-    # print(test.matrix)
-    # a = test.solve_greedy()
-    # print(a)
-    pass
+    def f():
+        test = BlockRelocation(4, 4)
+        test.all_permutations_state(test.matrix)
+
+
+    print(timeit.timeit(f, number=10000))
+
 
 # TODO HOW DO I ACTUALLY SAVE THE DATA FOR THE NEURAL NET, CURRENTLY ROW BY ROW AS OPPOSED TO COL BY COL
