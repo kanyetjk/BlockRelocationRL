@@ -201,4 +201,4 @@ class ValueNetwork(ApproximationModel):
 
 
 if __name__ == "__main__":
-    test = PolicyNetwork(4,4)
+    test = PolicyNetwork(4,6)

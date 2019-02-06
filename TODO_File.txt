@@ -41,3 +41,4 @@ TreeSearch:
 Evaluation:
 - Have perfect solutions to test on periodically to measure improvement:
     - measure: steps to optimality, time, visited nodes
+- Evaluate the Variance of the value function of all permutations -> should be as small as possible

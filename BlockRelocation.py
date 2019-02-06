@@ -92,7 +92,6 @@ class BlockRelocation:
     def move_on_matrix(self, matrix, first_pos, second_pos):
         # TODO NOT GOOD
         # finding the block too move
-
         for ii in range(self.height):
             if matrix[ii, first_pos] > 0:
                 val = matrix[ii, first_pos]
@@ -119,6 +118,7 @@ class BlockRelocation:
         if np.max(matrix) == 0:
             return False
         c = int(np.where(matrix == 1)[1])
+
         for val in matrix[:, c]:
             if val == 1:
                 return True
@@ -199,12 +199,21 @@ class BlockRelocation:
 
         return legal_moves
 
-    def all_next_states_and_moves(self, matrix=None):
+    def all_next_states_and_moves(self, matrix=None, moves=None):
         if matrix is None:
             matrix = self.matrix
 
+        if moves is None:
+            moves = self.all_legal_moves(matrix.copy())
+        else:
+            temp = []
+            for move in moves:
+                if self.is_legal_move(move[0], move[1], matrix):
+                    temp.append(move)
+            moves = temp
+
         df_list = []
-        for move in self.all_legal_moves(matrix.copy()):
+        for move in moves:
             temp = self.move_on_matrix(matrix.copy(), *move)
             if self.is_solved(temp):
                 df = pd.DataFrame(columns=["StateRepresentation", "Move"])
