@@ -9,7 +9,7 @@ class TreeSearch:
         self.policy_network = policy_network
         self.env = block_relocation
 
-    def find_path_2(self, matrix, search_depth=4, moves_per_turn=2, epsilon=0.5, threshold=0.1):
+    def find_path_2(self, matrix, search_depth=4, moves_per_turn=2, epsilon=0.5, threshold=0.05):
         # search depth maybe visited states
         # set for seen states
         # predict possible moves, add random epsilon value, pick values that get over the threshold
@@ -29,12 +29,9 @@ class TreeSearch:
         data = pd.DataFrame(columns=["StateRepresentation", "Move", "CurrentValue"])
         data = data.append({"StateRepresentation": matrix.copy(), "Move": [], "CurrentValue": 0}, ignore_index=True)
 
-        counter = - 5 # search depth
-        print(matrix)
-        #while not self.env.is_solved(matrix=matrix):
-        for x in range(15):
+        counter = - 5  # search depth
+        while not self.env.is_solved(matrix=matrix):
             counter += 1
-            print(data.shape)
             policy = self.policy_network.predict_df(data)
             policy = list(policy)
             data["policy"] = policy
@@ -48,6 +45,12 @@ class TreeSearch:
 
                 # getting all the next states
                 next_states = self.env.all_next_states_and_moves(matrix=state, moves=policy)
+
+                # exit if solved
+                if "Solved" in next_states.columns:
+                    next_states["Move"] = next_states["Move"].apply(lambda x: moves + x)
+                    return next_states.Move[0]
+
                 next_states["CurrentValue"] = np.zeros(next_states.shape[0])
 
                 if next_states.shape[0] == 0:
@@ -61,11 +64,12 @@ class TreeSearch:
 
                 new_data.append(next_states)
 
-            # removing all the duplicates
+            # stopping if no new states possible
             if len(new_data) == 0:
                 print("No paths found")
                 return
 
+            # removing all the duplicates
             data = pd.concat(new_data, sort=False)
             data["hashed"] = data["StateRepresentation"].apply(lambda s: s.tostring())
             data = data[~data['hashed'].isin(seen_states)]
@@ -89,14 +93,11 @@ class TreeSearch:
                 data = data[data.CurrentMove == best_move]
                 data = data.drop(columns="CurrentMove")
                 matrix = self.env.move_on_matrix(matrix, *best_move)
-                print(matrix)
 
-        #print(data)
-            #return
-        #print(matrix)
-        pass
+        return
 
     def policy_vector_to_moves(self, vector, threshold, random_exploration_factor):
+        #print(vector)
         noise = np.random.rand(*vector.shape) * random_exploration_factor
         vector += noise
         branches = np.where(vector >= threshold, 1, 0)
@@ -118,7 +119,6 @@ class TreeSearch:
             second_pos += 1
 
         return first_pos, second_pos
-
 
     def find_path(self, matrix, search_depth=4, moves_per_turn=2):
         # TODO Handle solved
@@ -214,5 +214,5 @@ if __name__ == "__main__":
     val = ValueNetwork(height=6, width=4)
     pol = PolicyNetwork(height=6, width=4)
     test = TreeSearch(val, BlockRelocation(4, 4), pol)
-    test.find_path_2(test.env.matrix)
+    print(test.find_path_2(test.env.create_instance_random(9)))
     #test.policy_vector_to_moves(np.random.rand(1,12), 0.5, 0.1)

@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-
+from tensorflow.python import debug as tf_debug
 
 # TODO Batch size bigger than 1
 # TODO Load config from json
@@ -61,7 +61,7 @@ class ApproximationModel(object):
 
     @staticmethod
     # TODO set epochs global?
-    def input_fn_train(x, y, batch_size=1, num_epochs=5):
+    def input_fn_train(x, y, batch_size=1, num_epochs=1):
         input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': x}, y=y,
             batch_size=batch_size, num_epochs=num_epochs, shuffle=True)
@@ -76,7 +76,7 @@ class ApproximationModel(object):
 
     def train(self, x, y):
         # TODO HOOKS?
-        self.model.train(self.input_fn_train(x, y, batch_size=128, num_epochs=2))
+        self.model.train(self.input_fn_train(x, y, batch_size=128, num_epochs=1))
 
     def predict_df(self, x):
         X = x.StateRepresentation
@@ -85,10 +85,12 @@ class ApproximationModel(object):
 
     def predict(self, x):
         # this will be a generator??
+        #hooks = [tf_debug.LocalCLIDebugHook()]
+        #return self.model.predict(self.input_fn_test(x), hooks=hooks)
         return self.model.predict(self.input_fn_test(x))
 
     def evaluate(self, x, y):
-        return self.model.evaluate(self.input_fn_train(x, y, batch_size=1, num_epochs=2))
+        return self.model.evaluate(self.input_fn_train(x, y, batch_size=128, num_epochs=1))
 
     def write_steps_summary(self, steps):
         # TODO CHANGE BACK TO 10
@@ -120,6 +122,7 @@ class PolicyNetwork(ApproximationModel):
         self.train(X, y)
 
     def input_fn_train(self, x, y, batch_size=128, num_epochs=1):
+
         input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': x}, y=y,
             batch_size=batch_size, num_epochs=num_epochs, shuffle=True)
@@ -136,6 +139,7 @@ class PolicyNetwork(ApproximationModel):
         output_layer = self.hidden_layer(n_input=100, n_hidden=num_output, prev_layer=last_layer, name_scope="output",
                                          relu=False)
 
+        output_layer = tf.nn.leaky_relu(output_layer)
         percent_output = tf.nn.softmax(output_layer)
 
         if mode == tf.estimator.ModeKeys.PREDICT:
@@ -143,7 +147,7 @@ class PolicyNetwork(ApproximationModel):
 
         loss_op = tf.losses.softmax_cross_entropy(onehot_labels=labels, logits=percent_output)
 
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
+        optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
 
         train_op = optimizer.minimize(loss_op, global_step=tf.train.get_global_step())
 
@@ -201,4 +205,6 @@ class ValueNetwork(ApproximationModel):
 
 
 if __name__ == "__main__":
+    from tensorflow.python import debug as tf_debug
     test = PolicyNetwork(4,6)
+    sess = tf_debug.LocalCLIDebugWrapperSession(sess)

@@ -22,15 +22,16 @@ class Optimizer:
         self.tree_searcher = TreeSearch(self.model, BlockRelocation(self.height, self.width), self.policy_network)
 
     def create_training_example(self, permutations=False):
-        self.env.matrix = self.env.create_instance(self.height, self.width)
-        path = self.tree_searcher.find_path(self.env.matrix.copy(), search_depth=4)
+        #self.env.matrix = self.env.create_instance(self.height, self.width)
+        matrix = self.env.create_instance_random(8)
+        path = self.tree_searcher.find_path_2(matrix.copy(), search_depth=4)
 
         # In case the solver can't solve it with the given depth, this function is called again
         if path is None:
             print("Could not solve")
             return self.create_training_example(permutations=permutations)
 
-        data = self.tree_searcher.move_along_path(self.env.matrix.copy(), path)
+        data = self.tree_searcher.move_along_path(matrix.copy(), path)
 
         if permutations:
             data = self.create_permutations(data)
@@ -38,13 +39,14 @@ class Optimizer:
 
         return data, len(path)
 
-    def reinforce(self, iterations=10):
+    def reinforce(self, iterations=20):
         for x in range(iterations):
             print("Iteration " + str(x))
-            self.train_on_new_instances(10)
-            old_sample = self.buffer.get_sample(4000, remove=True)
+            self.train_on_new_instances(25)
+            old_sample = self.buffer.get_sample(500, remove=True)
             self.model.train_df(old_sample)
             self.policy_network.train_df(old_sample)
+            print(self.buffer.storage.shape)
 
     def train_on_new_instances(self, num=1):
         data_list = []
@@ -54,7 +56,7 @@ class Optimizer:
             data, steps = self.create_training_example(permutations=True)
             data_list.append(data)
             step_list.append(steps)
-            print("solved " + str(ii+1))
+            #print("solved " + str(ii+1))
 
         data = pd.concat(data_list, ignore_index=True, sort=False)
         mean_steps = np.mean(step_list)
@@ -150,8 +152,6 @@ class Optimizer:
 
 if __name__ == "__main__":
     test = Optimizer()
-    #test.warm_start()
-    #test.create_training_example(permutations=True)
     #test.train_on_new_instances(3)
     #test.warm_start()
     #test.start_network()

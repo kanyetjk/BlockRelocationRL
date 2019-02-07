@@ -28,8 +28,8 @@ class BlockRelocation:
         air_rows = np.zeros((self.air, self.width))
         return np.concatenate((air_rows, containers), axis=0)
 
-    def create_instance_random(self):
-        containers = list(range(1, self.num_container + 1))
+    def create_instance_random(self, num_containers):
+        containers = list(range(1, num_containers + 1))
         containers += [0] * ((self.height * self.width) - len(containers))
 
         np.random.shuffle(containers)
@@ -216,8 +216,8 @@ class BlockRelocation:
         for move in moves:
             temp = self.move_on_matrix(matrix.copy(), *move)
             if self.is_solved(temp):
-                df = pd.DataFrame(columns=["StateRepresentation", "Move"])
-                df = df.append({"StateRepresentation": matrix.copy(), "Move": [move]}, ignore_index=True)
+                df = pd.DataFrame(columns=["StateRepresentation", "Move", "Solved"])
+                df = df.append({"StateRepresentation": matrix.copy(), "Move": [move], "Solved":True}, ignore_index=True)
                 return df
 
             df_list.append({"StateRepresentation": temp.copy(), "Move": [move]})
@@ -256,10 +256,15 @@ class BlockRelocation:
 if __name__ == "__main__":
     def f():
         test = BlockRelocation(4, 4)
-        test.all_permutations_state(test.matrix)
+        test.matrix = test.create_instance_random(7)
+        #print(test.matrix)
 
+    def f_2():
+        test = BlockRelocation(4, 4)
+        test.matrix = test.create_instance(4,6)
 
     print(timeit.timeit(f, number=10000))
+    print(timeit.timeit(f_2, number=10000))
 
 
 # TODO HOW DO I ACTUALLY SAVE THE DATA FOR THE NEURAL NET, CURRENTLY ROW BY ROW AS OPPOSED TO COL BY COL
