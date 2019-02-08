@@ -154,10 +154,8 @@ class BlockRelocation:
         self.matrix = matrix_copy.copy()
         return moves
 
-    def all_permutations_state(self, matrix=None, flatten=None):
+    def all_permutations_state(self, matrix):
         # TODO COULD RETURN AN ITERATOR FOR BETTER SPACE COMPLEXITY
-        if matrix is None:
-            matrix = self.matrix
 
         transposed_matrix = matrix.transpose()
         perm = np.array([np.array(p).flatten() for p in permutations(transposed_matrix)])

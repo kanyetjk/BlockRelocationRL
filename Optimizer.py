@@ -22,21 +22,19 @@ class Optimizer:
         self.tree_searcher = TreeSearch(self.model, BlockRelocation(self.height, self.width), self.policy_network)
 
     def create_training_example(self, permutations=True):
-        #self.env.matrix = self.env.create_instance(self.height, self.width)
         matrix = self.env.create_instance_random(8)
         path = self.tree_searcher.find_path_2(matrix.copy(), search_depth=4)
 
         # In case the solver can't solve it with the given depth, this function is called again
         if path is None:
-            print("Could not solve")
             return self.create_training_example(permutations=permutations)
 
         data = self.tree_searcher.move_along_path(matrix.copy(), path)
 
-        # TODO FORMAT DATA IF NO PERMUTATIONS
         if permutations:
             data = self.create_permutations(data)
-            #print(data.shape)
+        else:
+            data = self.prepare_data_for_model(data)
 
         return data, len(path)
 
@@ -47,7 +45,6 @@ class Optimizer:
             old_sample = self.buffer.get_sample(500, remove=True)
             self.model.train_df(old_sample)
             self.policy_network.train_df(old_sample)
-            print(self.buffer.storage.shape)
 
     def train_on_new_instances(self, num=1):
         data_list = []
@@ -57,12 +54,11 @@ class Optimizer:
             data, steps = self.create_training_example(permutations=True)
             data_list.append(data)
             step_list.append(steps)
-            #print("solved " + str(ii+1))
 
         data = pd.concat(data_list, ignore_index=True, sort=False)
         mean_steps = np.mean(step_list)
 
-        train_data = data.sample(int(data.shape[0]/5))  # Hardcoded
+        train_data = data.sample(int(data.shape[0]/4))  # Hardcoded
         data = data.drop(train_data.index)
 
         #return
@@ -72,12 +68,20 @@ class Optimizer:
 
         self.buffer.append(data)
 
+    def prepare_data_for_model(self, data):
+        # TODO DONT WANT TO CHANGE THE COLUMN NAME HERE
+        data["StateRepresentation"] = data["StateRepresentation"].apply(lambda x: x.transpose().flatten())
+        data.columns = ["Moves", "StateRepresentation", "Value"]
+        data["MovesEncoded"] = data["Moves"].copy()
+        data["MovesEncoded"] = data["MovesEncoded"].apply(lambda x: self.tree_searcher.move_to_hot_one_encoding(x))
+        return data
+
     def create_permutations(self, df):
         df_list = []
         for i, row in df.iterrows():
             # creating representations
             rep = self.env.all_permutations_state(row.StateRepresentation)
-            rep = [x.transpose().flatten() / 100 for x in rep]
+            rep = list(rep)
 
             # creating value column
             val = [np.array(row.Value) for _ in range(len(rep))]
@@ -98,26 +102,6 @@ class Optimizer:
 
         final_df = pd.concat(df_list, ignore_index=True)
         return final_df
-
-    def warm_start(self):
-        examples = self.tree_searcher.generate_basic_starting_data(num_examples=500)
-
-        X = examples.StateRepresentation.values
-        X = np.array([x.transpose().flatten() / 100 for x in X])
-
-        y = examples.Value
-        y = np.array([np.array([val], dtype=float) for val in y])
-
-        self.model.train(X, y)
-
-        examples_eval = self.tree_searcher.generate_basic_starting_data(num_examples=50)
-        X_eval = examples_eval.StateRepresentation.values
-        X_eval = np.array([x.transpose().flatten() / 100 for x in X_eval])
-
-        y_eval = examples_eval.Value
-        y_eval = np.array([np.array([val], dtype=float) for val in y_eval])
-
-        print(self.model.evaluate(X_eval, y_eval))
 
     def compare_model(self):
         examples = self.tree_searcher.generate_basic_starting_data(num_examples=10)
@@ -141,16 +125,6 @@ class Optimizer:
         # run batch from buffer
         pass
 
-    def find_optimal_solution_bfs(self, matrix):
-        pass
-
-    def find_fast_solution(self, matrix):
-        pass
-
-    def start_network(self):
-        for x in range(20):
-            self.warm_start()
-
     def test_value_network(self):
         matrix = self.env.create_instance_random(8)
         while self.env.can_remove_matrix(matrix):
@@ -161,12 +135,13 @@ class Optimizer:
         print(list(self.model.predict(m)))
         print(list(self.policy_network.predict(m)))
 
+    def test_permutations(self):
+        a = self.create_training_example(permutations=False)
+
 
 
 if __name__ == "__main__":
     test = Optimizer()
+    test.reinforce(20)
+    #test.test_value_network()
     #test.train_on_new_instances(1)
-    #test.warm_start()
-    #test.start_network()
-    #test.reinforce(20)
-    test.test_value_network()

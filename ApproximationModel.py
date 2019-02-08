@@ -2,8 +2,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
 
-# TODO Batch size bigger than 1
 # TODO Load config from json
+# TODO set epochs global?
 
 
 class ApproximationModel(object):
@@ -12,7 +12,8 @@ class ApproximationModel(object):
         self.width = width
         self.model = None  # TODO?
         self.steps_list = []
-        pass
+        self.num_epochs = 1
+        self.batch_size = 128
         # TODO load configs
 
     def build_model_beginning(self, features):
@@ -24,10 +25,6 @@ class ApproximationModel(object):
         second_layer = self.hidden_layer(n_input=30, n_hidden=30, name_scope="second_layer",
                                          prev_layer=first_layer)
         return second_layer
-
-    @staticmethod
-    def reshape_input(input_matrix):
-        return input_matrix.transpose().flatten()
 
     def sharded_layer(self, num_columns, column_height, num_hidden, input_tensor):
         with tf.name_scope("Shared_layer"):
@@ -60,31 +57,33 @@ class ApproximationModel(object):
         return layer
 
     @staticmethod
-    # TODO set epochs global?
-    def input_fn_train(x, y, batch_size=128, num_epochs=1):
+    def prepare_state_data(data):
+        prepared_data = data.StateRepresentation.values
+        prepared_data = np.array([np.array(x)/max(x) for x in prepared_data])
+        return prepared_data
+
+    def input_fn_train(self, x, y, batch_size=128):
         input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': x}, y=y,
-            batch_size=batch_size, num_epochs=num_epochs, shuffle=True)
+            batch_size=self.batch_size, num_epochs=self.num_epochs, shuffle=True)
         return input_fn
 
-    @staticmethod
-    def input_fn_predict(x):
+    def input_fn_predict(self, x):
         input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': x},
-            batch_size=128, num_epochs=1, shuffle=False)
+            batch_size=self.batch_size, num_epochs=self.num_epochs, shuffle=False)
         return input_fn
 
     def train(self, x, y):
-        # TODO HOOKS?
-        self.model.train(self.input_fn_train(x, y, batch_size=128, num_epochs=1))
+        self.model.train(self.input_fn_train(x, y, batch_size=128))
 
-    def predict_df(self, x):
-        X = x.StateRepresentation
-        X = np.array([x.transpose().flatten() / 100 for x in X])
+    def predict_df(self, data):
+        X = data.StateRepresentation
+        X = [x.transpose().flatten() for x in X]
+        X = np.array([x / max(x) for x in X])
         return self.predict(X)
 
     def predict(self, x):
-        # this will be a generator??
         #hooks = [tf_debug.LocalCLIDebugHook()]
         #return self.model.predict(self.input_fn_test(x), hooks=hooks)
         return self.model.predict(self.input_fn_predict(x))
@@ -114,13 +113,13 @@ class PolicyNetwork(ApproximationModel):
         self.model = tf.estimator.Estimator(self.model_fn, "GraphPN/")
 
     def train_df(self, df):
-        X = df.StateRepresentation.values
-        X = np.array([np.array(x) for x in X])
+        X = self.prepare_state_data(df)
 
         y = df.MovesEncoded
         y = np.array([np.array(val, dtype=float) for val in y])
         self.train(X, y)
 
+    """
     def input_fn_train(self, x, y, batch_size=128, num_epochs=1):
 
         input_fn = tf.estimator.inputs.numpy_input_fn(
@@ -130,6 +129,7 @@ class PolicyNetwork(ApproximationModel):
 
     def train(self, x, y):
         self.model.train(self.input_fn_train(x, y))
+        """
 
     def model_fn(self, features, labels, mode):
         last_layer = self.build_model_beginning(features)
@@ -194,8 +194,7 @@ class ValueNetwork(ApproximationModel):
         return estimator_specs
 
     def train_df(self, df):
-        X = df.StateRepresentation.values
-        X = np.array([np.array(x) for x in X])
+        X = self.prepare_state_data(df)
 
         y = df.Value
         y = np.array([np.array([val], dtype=float) for val in y])
@@ -203,5 +202,4 @@ class ValueNetwork(ApproximationModel):
 
 
 if __name__ == "__main__":
-    from tensorflow.python import debug as tf_debug
     test = PolicyNetwork(4,6)
