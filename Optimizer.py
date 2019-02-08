@@ -42,7 +42,7 @@ class Optimizer:
         for x in range(iterations):
             print("Iteration " + str(x))
             self.train_on_new_instances(30)
-            old_sample = self.buffer.get_sample(500, remove=True)
+            old_sample = self.buffer.get_sample(750, remove=True)
             self.model.train_df(old_sample)
             self.policy_network.train_df(old_sample)
 
@@ -61,7 +61,7 @@ class Optimizer:
         train_data = data.sample(int(data.shape[0]/4))  # Hardcoded
         data = data.drop(train_data.index)
 
-        #return
+        # return
         self.model.train_df(data)
         self.policy_network.train_df(data)
         self.model.write_steps_summary(mean_steps)
@@ -130,8 +130,9 @@ class Optimizer:
         while self.env.can_remove_matrix(matrix):
             matrix = self.env.remove_container_from_matrix(matrix)
         print(matrix)
-        m = matrix.transpose().flatten() / 100
-        m = np.array([m])
+        m = matrix.transpose().flatten()
+        m = np.array([np.array(m) / 16])
+        print(m)
         print(list(self.model.predict(m)))
         print(list(self.policy_network.predict(m)))
 
@@ -142,6 +143,6 @@ class Optimizer:
 
 if __name__ == "__main__":
     test = Optimizer()
-    test.reinforce(20)
-    #test.test_value_network()
+    #test.reinforce(20)
+    test.test_value_network()
     #test.train_on_new_instances(1)

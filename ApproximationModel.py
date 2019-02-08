@@ -3,17 +3,28 @@ import tensorflow as tf
 from tensorflow.python import debug as tf_debug
 
 # TODO Load config from json
-# TODO set epochs global?
 
 
 class ApproximationModel(object):
+    """The parent class to the value and policy network.
+
+    The Deep Learning architecture is using the tensorflow estimator API where a model_fn has to be implemented.
+    The parent class implements the beginning of the network up to the output layer, which is implemented in the
+    child classes. The model architecture can be changed in the configs.
+
+    Attributes:
+        TODO attributes
+    """
+
     def __init__(self, height, width):
         self.height = height
         self.width = width
         self.model = None  # TODO?
         self.steps_list = []
-        self.num_epochs = 1
+        self.num_epochs = 3
         self.batch_size = 128
+        self.max_value = 16
+        self.learning_rate = 0.002
         # TODO load configs
 
     def build_model_beginning(self, features):
@@ -56,10 +67,9 @@ class ApproximationModel(object):
                 layer = tf.add(tf.matmul(prev_layer, weights), bias)
         return layer
 
-    @staticmethod
-    def prepare_state_data(data):
+    def prepare_state_data(self, data):
         prepared_data = data.StateRepresentation.values
-        prepared_data = np.array([np.array(x)/max(x) for x in prepared_data])
+        prepared_data = np.array([np.array(x) / self.max_value for x in prepared_data])
         return prepared_data
 
     def input_fn_train(self, x, y, batch_size=128):
@@ -71,7 +81,7 @@ class ApproximationModel(object):
     def input_fn_predict(self, x):
         input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': x},
-            batch_size=self.batch_size, num_epochs=self.num_epochs, shuffle=False)
+            batch_size=self.batch_size, num_epochs=1, shuffle=False)
         return input_fn
 
     def train(self, x, y):
@@ -80,7 +90,7 @@ class ApproximationModel(object):
     def predict_df(self, data):
         X = data.StateRepresentation
         X = [x.transpose().flatten() for x in X]
-        X = np.array([x / max(x) for x in X])
+        X = np.array([x / self.max_value for x in X])
         return self.predict(X)
 
     def predict(self, x):
@@ -119,18 +129,6 @@ class PolicyNetwork(ApproximationModel):
         y = np.array([np.array(val, dtype=float) for val in y])
         self.train(X, y)
 
-    """
-    def input_fn_train(self, x, y, batch_size=128, num_epochs=1):
-
-        input_fn = tf.estimator.inputs.numpy_input_fn(
-            x={'x': x}, y=y,
-            batch_size=batch_size, num_epochs=num_epochs, shuffle=True)
-        return input_fn
-
-    def train(self, x, y):
-        self.model.train(self.input_fn_train(x, y))
-        """
-
     def model_fn(self, features, labels, mode):
         last_layer = self.build_model_beginning(features)
 
@@ -146,7 +144,7 @@ class PolicyNetwork(ApproximationModel):
 
         loss_op = tf.losses.softmax_cross_entropy(onehot_labels=labels, logits=output_layer)
 
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
 
         train_op = optimizer.minimize(loss_op, global_step=tf.train.get_global_step())
 
@@ -178,7 +176,7 @@ class ValueNetwork(ApproximationModel):
         loss_op = tf.losses.mean_squared_error(labels=labels,
                                                predictions=predicted_value)
 
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
 
         train_op = optimizer.minimize(loss_op, global_step=tf.train.get_global_step())
 
