@@ -19,9 +19,9 @@ class ApproximationModel(object):
         input_tensor = features["x"]
         shared_layer = self.sharded_layer(num_columns=self.width, column_height=self.height, num_hidden=3,
                                           input_tensor=input_tensor)
-        first_layer = self.hidden_layer(n_input=self.width * 3, n_hidden=100, name_scope="first_connected_layer",
+        first_layer = self.hidden_layer(n_input=self.width * 3, n_hidden=30, name_scope="first_connected_layer",
                                         prev_layer=shared_layer)
-        second_layer = self.hidden_layer(n_input=100, n_hidden=100, name_scope="second_layer",
+        second_layer = self.hidden_layer(n_input=30, n_hidden=30, name_scope="second_layer",
                                          prev_layer=first_layer)
         return second_layer
 
@@ -61,14 +61,14 @@ class ApproximationModel(object):
 
     @staticmethod
     # TODO set epochs global?
-    def input_fn_train(x, y, batch_size=1, num_epochs=1):
+    def input_fn_train(x, y, batch_size=128, num_epochs=1):
         input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': x}, y=y,
             batch_size=batch_size, num_epochs=num_epochs, shuffle=True)
         return input_fn
 
     @staticmethod
-    def input_fn_test(x):
+    def input_fn_predict(x):
         input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': x},
             batch_size=128, num_epochs=1, shuffle=False)
@@ -87,7 +87,7 @@ class ApproximationModel(object):
         # this will be a generator??
         #hooks = [tf_debug.LocalCLIDebugHook()]
         #return self.model.predict(self.input_fn_test(x), hooks=hooks)
-        return self.model.predict(self.input_fn_test(x))
+        return self.model.predict(self.input_fn_predict(x))
 
     def evaluate(self, x, y):
         return self.model.evaluate(self.input_fn_train(x, y, batch_size=128, num_epochs=1))
@@ -132,22 +132,21 @@ class PolicyNetwork(ApproximationModel):
         self.model.train(self.input_fn_train(x, y))
 
     def model_fn(self, features, labels, mode):
-        # TODO NOT CLEAR WITH THE OUTPUT
         last_layer = self.build_model_beginning(features)
 
         num_output = self.width * (self.width-1)
-        output_layer = self.hidden_layer(n_input=100, n_hidden=num_output, prev_layer=last_layer, name_scope="output",
+        output_layer = self.hidden_layer(n_input=30, n_hidden=num_output, prev_layer=last_layer, name_scope="output",
                                          relu=False)
 
-        output_layer = tf.nn.leaky_relu(output_layer)
+        #output_layer = tf.nn.leaky_relu(output_layer)
         percent_output = tf.nn.softmax(output_layer)
 
         if mode == tf.estimator.ModeKeys.PREDICT:
             return tf.estimator.EstimatorSpec(mode, predictions=percent_output)
 
-        loss_op = tf.losses.softmax_cross_entropy(onehot_labels=labels, logits=percent_output)
+        loss_op = tf.losses.softmax_cross_entropy(onehot_labels=labels, logits=output_layer)
 
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
+        optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
 
         train_op = optimizer.minimize(loss_op, global_step=tf.train.get_global_step())
 
@@ -170,7 +169,7 @@ class ValueNetwork(ApproximationModel):
     def model_fn(self, features, labels, mode):
         last_layer = self.build_model_beginning(features)
 
-        predicted_value = self.hidden_layer(n_input=100, n_hidden=1, prev_layer=last_layer, name_scope="output",
+        predicted_value = self.hidden_layer(n_input=30, n_hidden=1, prev_layer=last_layer, name_scope="output",
                                             relu=False)
 
         if mode == tf.estimator.ModeKeys.PREDICT:
@@ -197,7 +196,6 @@ class ValueNetwork(ApproximationModel):
     def train_df(self, df):
         X = df.StateRepresentation.values
         X = np.array([np.array(x) for x in X])
-        #X = np.array([x.transpose().flatten() / 100 for x in X])
 
         y = df.Value
         y = np.array([np.array([val], dtype=float) for val in y])
@@ -207,4 +205,3 @@ class ValueNetwork(ApproximationModel):
 if __name__ == "__main__":
     from tensorflow.python import debug as tf_debug
     test = PolicyNetwork(4,6)
-    sess = tf_debug.LocalCLIDebugWrapperSession(sess)

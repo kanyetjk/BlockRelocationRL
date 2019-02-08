@@ -160,7 +160,7 @@ class BlockRelocation:
             matrix = self.matrix
 
         transposed_matrix = matrix.transpose()
-        perm = np.array([np.array(p).transpose().flatten() for p in permutations(transposed_matrix)])
+        perm = np.array([np.array(p).flatten() for p in permutations(transposed_matrix)])
         return perm
 
     def all_permutations_move(self, pos1, pos2):
@@ -254,17 +254,13 @@ class BlockRelocation:
 
 
 if __name__ == "__main__":
-    def f():
-        test = BlockRelocation(4, 4)
-        test.matrix = test.create_instance_random(7)
-        #print(test.matrix)
+    a = BlockRelocation(4,4)
+    c = a.all_permutations_state(a.matrix)
+    b = a.all_permutations_move(0,1)
+    for xx, move in zip(c, b):
+        print(xx.reshape(6,4))
+        print(move)
 
-    def f_2():
-        test = BlockRelocation(4, 4)
-        test.matrix = test.create_instance(4,6)
-
-    print(timeit.timeit(f, number=10000))
-    print(timeit.timeit(f_2, number=10000))
 
 
 # TODO HOW DO I ACTUALLY SAVE THE DATA FOR THE NEURAL NET, CURRENTLY ROW BY ROW AS OPPOSED TO COL BY COL

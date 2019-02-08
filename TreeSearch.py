@@ -24,6 +24,7 @@ class TreeSearch:
         while self.env.can_remove_matrix(matrix):
             matrix = self.env.remove_container_from_matrix(matrix)
 
+        #print(matrix)
         # initializing the set and DataFrame
         seen_states = set()
         data = pd.DataFrame(columns=["StateRepresentation", "Move", "CurrentValue"])
@@ -182,14 +183,15 @@ class TreeSearch:
         return first_pos, second_pos
 
     def move_along_path(self, matrix, path):
-        self.env.matrix = matrix
+        while self.env.can_remove_matrix(matrix):
+            matrix = self.env.remove_container_from_matrix(matrix)
         steps_left = len(path)
 
         df_list = []
         for move in path:
-            rep = self.env.matrix.copy()
+            rep = matrix.copy()
             df_list.append({"StateRepresentation": rep, "Move": move, "Value": -steps_left})
-            self.env.move(*move)
+            matrix = self.env.move_on_matrix(matrix, *move)
             steps_left -= 1
 
         df = pd.DataFrame(df_list)
@@ -215,4 +217,3 @@ if __name__ == "__main__":
     pol = PolicyNetwork(height=6, width=4)
     test = TreeSearch(val, BlockRelocation(4, 4), pol)
     print(test.find_path_2(test.env.create_instance_random(9)))
-    #test.policy_vector_to_moves(np.random.rand(1,12), 0.5, 0.1)
