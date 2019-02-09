@@ -1,6 +1,5 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.python import debug as tf_debug
 
 # TODO Load config from json
 
@@ -24,8 +23,8 @@ class ApproximationModel(object):
         self.num_epochs = 2
         self.batch_size = 256
         self.max_value = 16
-        self.learning_rate = 0.005
-        self.name = "Value_N_LR_" + str(self.learning_rate) + "_BS_" + str(self.batch_size)
+        self.learning_rate = 0.0075
+        self.name = "_LR_" + str(self.learning_rate) + "_BS_" + str(self.batch_size)
         # TODO load configs
 
     def build_model_beginning(self, features):
@@ -85,6 +84,12 @@ class ApproximationModel(object):
             batch_size=self.batch_size, num_epochs=1, shuffle=False)
         return input_fn
 
+    def input_fn_evaluate(self, x, y, batch_size=128):
+        input_fn = tf.estimator.inputs.numpy_input_fn(
+            x={'x': x}, y=y,
+            batch_size=self.batch_size, num_epochs=self.num_epochs, shuffle=True)
+        return input_fn
+
     def train(self, x, y):
         self.model.train(self.input_fn_train(x, y, batch_size=128))
 
@@ -95,12 +100,16 @@ class ApproximationModel(object):
         return self.predict(X)
 
     def predict(self, x):
-        #hooks = [tf_debug.LocalCLIDebugHook()]
-        #return self.model.predict(self.input_fn_test(x), hooks=hooks)
         return self.model.predict(self.input_fn_predict(x))
 
     def evaluate(self, x, y):
-        return self.model.evaluate(self.input_fn_train(x, y, batch_size=128, num_epochs=1))
+        return self.model.evaluate(self.input_fn_train(x, y, batch_size=128))
+
+    def evaluate_df(self, df):
+        X = self.prepare_state_data(df)
+        y = df.Value
+        y = np.array([np.array([val], dtype=float) for val in y])
+        self.evaluate(X, y)
 
     def write_steps_summary(self, steps):
         # TODO CHANGE BACK TO 10
@@ -121,7 +130,8 @@ class ApproximationModel(object):
 class PolicyNetwork(ApproximationModel):
     def __init__(self, height, width, configs):
         super().__init__(height, width, configs)
-        self.model = tf.estimator.Estimator(self.model_fn, "GraphPN/")
+        path = "TensorBoardFiles/PN" + self.name + "/"
+        self.model = tf.estimator.Estimator(self.model_fn, path)
 
     def train_df(self, df):
         X = self.prepare_state_data(df)
@@ -137,7 +147,6 @@ class PolicyNetwork(ApproximationModel):
         output_layer = self.hidden_layer(n_input=30, n_hidden=num_output, prev_layer=last_layer, name_scope="output",
                                          relu=False)
 
-        #output_layer = tf.nn.leaky_relu(output_layer)
         percent_output = tf.nn.softmax(output_layer)
 
         if mode == tf.estimator.ModeKeys.PREDICT:
@@ -149,13 +158,20 @@ class PolicyNetwork(ApproximationModel):
 
         train_op = optimizer.minimize(loss_op, global_step=tf.train.get_global_step())
 
-        acc_op = tf.losses.softmax_cross_entropy(onehot_labels=labels, logits=percent_output)
+        #TODO
+        #acc_op = tf.losses.softmax_cross_entropy(onehot_labels=labels, logits=percent_output)
+        classes = tf.math.argmax(labels,axis=1)
+        binary_prediction = tf.math.argmax(percent_output)
+        #accuracy = tf.metrics.accuracy(labels=labels, predictions=binary_prediction)
+        mean_per_class_accuracy = tf.metrics.mean_per_class_accuracy(labels=classes, predictions=percent_output,
+                                                                     num_classes=12)
 
         estimator_specs = tf.estimator.EstimatorSpec(
             mode=mode,
             predictions=percent_output,
             loss=loss_op,
-            train_op=train_op)
+            train_op=train_op,
+            eval_metric_ops={'accuracy': mean_per_class_accuracy})
 
         return estimator_specs
 
@@ -163,7 +179,7 @@ class PolicyNetwork(ApproximationModel):
 class ValueNetwork(ApproximationModel):
     def __init__(self, height, width, configs):
         super().__init__(height, width, configs)
-        path = "TensorBoardFiles/" + self.name + "/"
+        path = "TensorBoardFiles/VN" + self.name + "/"
         self.model = tf.estimator.Estimator(self.model_fn, path)
 
     def model_fn(self, features, labels, mode):
@@ -200,6 +216,3 @@ class ValueNetwork(ApproximationModel):
         y = np.array([np.array([val], dtype=float) for val in y])
         self.train(X, y)
 
-
-if __name__ == "__main__":
-    test = PolicyNetwork(4,6)

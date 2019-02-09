@@ -1,10 +1,8 @@
 import numpy as np
 import pandas as pd
 from itertools import permutations
-import timeit
 
 
-# TODO AIR STUFF
 # DFS no space problem
 # Beam not so good, because only using the value network
 
@@ -43,8 +41,8 @@ class BlockRelocation:
                     top += 1
             return column
 
-        for c in range(self.width):
-            representation[:, c] = fix_col(representation[:, c])
+        for col in range(self.width):
+            representation[:, col] = fix_col(representation[:, col])
 
         return representation
 
@@ -109,12 +107,14 @@ class BlockRelocation:
 
         return matrix
 
-    def remove_container_from_matrix(self, matrix):
+    @staticmethod
+    def remove_container_from_matrix(matrix):
         matrix = matrix - 1
         matrix[matrix < 0] = 0
         return matrix
 
-    def can_remove_matrix(self, matrix):
+    @staticmethod
+    def can_remove_matrix(matrix):
         if np.max(matrix) == 0:
             return False
         c = int(np.where(matrix == 1)[1])
@@ -154,9 +154,8 @@ class BlockRelocation:
         self.matrix = matrix_copy.copy()
         return moves
 
-    def all_permutations_state(self, matrix):
-        # TODO COULD RETURN AN ITERATOR FOR BETTER SPACE COMPLEXITY
-
+    @staticmethod
+    def all_permutations_state(matrix):
         transposed_matrix = matrix.transpose()
         perm = np.array([np.array(p).flatten() for p in permutations(transposed_matrix)])
         return perm
@@ -215,7 +214,8 @@ class BlockRelocation:
             temp = self.move_on_matrix(matrix.copy(), *move)
             if self.is_solved(temp):
                 df = pd.DataFrame(columns=["StateRepresentation", "Move", "Solved"])
-                df = df.append({"StateRepresentation": matrix.copy(), "Move": [move], "Solved":True}, ignore_index=True)
+                df = df.append({"StateRepresentation": matrix.copy(), "Move": [move], "Solved": True},
+                               ignore_index=True)
                 return df
 
             df_list.append({"StateRepresentation": temp.copy(), "Move": [move]})
@@ -235,7 +235,7 @@ class BlockRelocation:
                 temp = self.all_next_states_and_moves(m.copy())
                 temp["Move"] = (prev_moves + temp.Move).copy()
                 if temp.shape[0] == 1:
-                    #print("solved_fully")
+                    # print("solved_fully")
                     return temp
                 next_list.append(temp)
 
@@ -252,13 +252,9 @@ class BlockRelocation:
 
 
 if __name__ == "__main__":
-    a = BlockRelocation(4,4)
+    a = BlockRelocation(4, 4)
     c = a.all_permutations_state(a.matrix)
-    b = a.all_permutations_move(0,1)
+    b = a.all_permutations_move(0, 1)
     for xx, move in zip(c, b):
-        print(xx.reshape(6,4))
+        print(xx.reshape(6, 4))
         print(move)
-
-
-
-# TODO HOW DO I ACTUALLY SAVE THE DATA FOR THE NEURAL NET, CURRENTLY ROW BY ROW AS OPPOSED TO COL BY COL

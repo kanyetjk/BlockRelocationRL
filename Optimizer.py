@@ -3,6 +3,7 @@ from BlockRelocation import BlockRelocation
 from TreeSearch import TreeSearch
 from ApproximationModel import ValueNetwork, PolicyNetwork
 from Utils import load_configs
+from sklearn.model_selection import train_test_split
 
 import numpy as np
 import pandas as pd
@@ -21,9 +22,11 @@ class Optimizer:
         self.policy_network = PolicyNetwork(height=self.height + 2, width=self.width, configs=configs)
         self.tree_searcher = TreeSearch(self.model, BlockRelocation(self.height, self.width), self.policy_network)
 
-    def create_training_example(self, permutations=True):
-        matrix = self.env.create_instance_random(8)
+    def create_training_example(self, permutations=True, units=8):
+        matrix = self.env.create_instance_random(units)
+        print(matrix)
         path = self.tree_searcher.find_path_2(matrix.copy(), search_depth=4)
+        print(path)
 
         # In case the solver can't solve it with the given depth, this function is called again
         if path is None:
@@ -60,7 +63,7 @@ class Optimizer:
             data.to_csv(f, header=False, index=False)
         mean_steps = np.mean(step_list)
 
-        train_data = data.sample(int(data.shape[0]/3))  # Hardcoded
+        train_data = data.sample(int(data.shape[0] / 3))  # Hardcoded
         data = data.drop(train_data.index)
 
         # return
@@ -142,15 +145,28 @@ class Optimizer:
         data = pd.read_csv("up_to_8.csv")
         data["StateRepresentation"] = data["StateRepresentation"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
         data["MovesEncoded"] = data["MovesEncoded"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
-        for _ in range(5):
-            self.model.train_df(data)
-        #self.policy_network.train_df(data)
+
+        train_data, test_data = train_test_split(data, shuffle=True, test_size=0.25)
+
+        for _ in range(20):
+            self.model.train_df(train_data)
+            self.model.evaluate_df(test_data)
+            #self.policy_network.train_df(train_data)
+            #self.policy_network.evaluate_df(train_data)
+        # self.policy_network.train_df(data)
+
+    def training_process(self):
+        # Train with 8 units,
+        # create data with 9 units -> train
+        # repeat
+        pass
 
 
 if __name__ == "__main__":
     test = Optimizer()
-    #test.reinforce(20)
+    #test.reinforce(1)
     #test.test_value_network()
-    #test.train_on_new_instances(1)
-    #test.test_saving_data()
-    test.test_training_on_csv()
+    # test.train_on_new_instances(1)
+    # test.test_saving_data()
+    #test.test_training_on_csv()
+    test.create_training_example(permutations=False, units=12)

@@ -8,6 +8,7 @@ class TreeSearch:
         self.model = model
         self.policy_network = policy_network
         self.env = block_relocation
+        self.index_to_moves_dict = {}
 
     def find_path_2(self, matrix, search_depth=4, moves_per_turn=2, epsilon=0.5, threshold=0.05):
         # search depth maybe visited states
@@ -24,7 +25,7 @@ class TreeSearch:
         while self.env.can_remove_matrix(matrix):
             matrix = self.env.remove_container_from_matrix(matrix)
 
-        #print(matrix)
+        # print(matrix)
         # initializing the set and DataFrame
         seen_states = set()
         data = pd.DataFrame(columns=["StateRepresentation", "Move", "CurrentValue"])
@@ -88,7 +89,7 @@ class TreeSearch:
                 best_row_index = data.StateValue.idxmax()
                 best_row = data.loc[best_row_index, :]
                 best_move = best_row.Move[counter]
-                #print(best_row.StateRepresentation)
+                # print(best_row.StateRepresentation)
 
                 data["CurrentMove"] = data.Move.apply(lambda arr: arr[counter])
                 data = data[data.CurrentMove == best_move]
@@ -98,7 +99,7 @@ class TreeSearch:
         return
 
     def policy_vector_to_moves(self, vector, threshold, random_exploration_factor):
-        #print(vector)
+        # print(vector)
         noise = np.random.rand(*vector.shape) * random_exploration_factor
         vector += noise
         branches = np.where(vector >= threshold, 1, 0)
@@ -110,8 +111,10 @@ class TreeSearch:
 
         return moves
 
-    #@lru_cache(maxsize=900) TODO CUSTOM CACHE
     def index_to_moves(self, position_in_vector):
+        if position_in_vector in self.index_to_moves_dict:
+            return self.index_to_moves_dict[position_in_vector]
+
         width = self.env.width - 1
         first_pos = position_in_vector // width
         second_pos = position_in_vector % width
@@ -119,6 +122,7 @@ class TreeSearch:
         if second_pos >= first_pos:
             second_pos += 1
 
+        self.index_to_moves_dict[position_in_vector] = (first_pos, second_pos)
         return first_pos, second_pos
 
     def find_path(self, matrix, search_depth=4, moves_per_turn=2):
@@ -148,7 +152,7 @@ class TreeSearch:
                 if not self.env.is_solved(matrix=matrix):
                     path.append(best_row.Move[x])
                     print(matrix)
-                    #print(best_row.Move[x])
+                    # print(best_row.Move[x])
                     matrix = self.env.move_on_matrix(matrix, *best_row.Move[x])
 
         return path
@@ -197,22 +201,11 @@ class TreeSearch:
         df = pd.DataFrame(df_list)
         return df
 
-    def generate_basic_starting_data(self, num_examples):
-        # TODO Currently hardcoded
-        list_of_dfs = []
-        for _ in range(num_examples):
-            self.env.matrix = self.env.create_instance(4, 4)
-            paths = self.env.solve_greedy()
-            df = self.move_along_path(self.env.matrix, paths)
-            list_of_dfs.append(df)
-
-        final_df = pd.concat(list_of_dfs, axis=0, ignore_index=True)
-        return final_df
-
 
 if __name__ == "__main__":
     from BlockRelocation import BlockRelocation
     from ApproximationModel import PolicyNetwork, ValueNetwork
+
     val = ValueNetwork(height=6, width=4)
     pol = PolicyNetwork(height=6, width=4)
     test = TreeSearch(val, BlockRelocation(4, 4), pol)
