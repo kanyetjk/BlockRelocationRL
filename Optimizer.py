@@ -17,8 +17,8 @@ class Optimizer:
 
         self.buffer = Buffer(self.buffer_size)
         self.env = BlockRelocation(self.height, self.width)
-        self.model = ValueNetwork(height=self.height + 2, width=self.width)
-        self.policy_network = PolicyNetwork(height=self.height + 2, width=self.width)
+        self.model = ValueNetwork(height=self.height + 2, width=self.width, configs=configs)
+        self.policy_network = PolicyNetwork(height=self.height + 2, width=self.width, configs=configs)
         self.tree_searcher = TreeSearch(self.model, BlockRelocation(self.height, self.width), self.policy_network)
 
     def create_training_example(self, permutations=True):
@@ -41,8 +41,8 @@ class Optimizer:
     def reinforce(self, iterations=20):
         for x in range(iterations):
             print("Iteration " + str(x))
-            self.train_on_new_instances(30)
-            old_sample = self.buffer.get_sample(750, remove=True)
+            self.train_on_new_instances(50)
+            old_sample = self.buffer.get_sample(950, remove=True)
             self.model.train_df(old_sample)
             self.policy_network.train_df(old_sample)
 
@@ -56,9 +56,11 @@ class Optimizer:
             step_list.append(steps)
 
         data = pd.concat(data_list, ignore_index=True, sort=False)
+        with open('up_to_8.csv', 'a') as f:
+            data.to_csv(f, header=False, index=False)
         mean_steps = np.mean(step_list)
 
-        train_data = data.sample(int(data.shape[0]/4))  # Hardcoded
+        train_data = data.sample(int(data.shape[0]/3))  # Hardcoded
         data = data.drop(train_data.index)
 
         # return
@@ -136,13 +138,19 @@ class Optimizer:
         print(list(self.model.predict(m)))
         print(list(self.policy_network.predict(m)))
 
-    def test_permutations(self):
-        a = self.create_training_example(permutations=False)
-
+    def test_training_on_csv(self):
+        data = pd.read_csv("up_to_8.csv")
+        data["StateRepresentation"] = data["StateRepresentation"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
+        data["MovesEncoded"] = data["MovesEncoded"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
+        for _ in range(5):
+            self.model.train_df(data)
+        #self.policy_network.train_df(data)
 
 
 if __name__ == "__main__":
     test = Optimizer()
     #test.reinforce(20)
-    test.test_value_network()
+    #test.test_value_network()
     #test.train_on_new_instances(1)
+    #test.test_saving_data()
+    test.test_training_on_csv()

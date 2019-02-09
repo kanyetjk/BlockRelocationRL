@@ -16,15 +16,16 @@ class ApproximationModel(object):
         TODO attributes
     """
 
-    def __init__(self, height, width):
+    def __init__(self, height, width, configs):
         self.height = height
         self.width = width
         self.model = None  # TODO?
         self.steps_list = []
-        self.num_epochs = 3
-        self.batch_size = 128
+        self.num_epochs = 2
+        self.batch_size = 256
         self.max_value = 16
-        self.learning_rate = 0.002
+        self.learning_rate = 0.005
+        self.name = "Value_N_LR_" + str(self.learning_rate) + "_BS_" + str(self.batch_size)
         # TODO load configs
 
     def build_model_beginning(self, features):
@@ -118,8 +119,8 @@ class ApproximationModel(object):
 
 
 class PolicyNetwork(ApproximationModel):
-    def __init__(self, height, width):
-        super().__init__(height, width)
+    def __init__(self, height, width, configs):
+        super().__init__(height, width, configs)
         self.model = tf.estimator.Estimator(self.model_fn, "GraphPN/")
 
     def train_df(self, df):
@@ -160,9 +161,10 @@ class PolicyNetwork(ApproximationModel):
 
 
 class ValueNetwork(ApproximationModel):
-    def __init__(self, height, width):
-        super().__init__(height, width)
-        self.model = tf.estimator.Estimator(self.model_fn, "TBGraphs/")
+    def __init__(self, height, width, configs):
+        super().__init__(height, width, configs)
+        path = "TensorBoardFiles/" + self.name + "/"
+        self.model = tf.estimator.Estimator(self.model_fn, path)
 
     def model_fn(self, features, labels, mode):
         last_layer = self.build_model_beginning(features)
