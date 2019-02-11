@@ -11,15 +11,15 @@ import pandas as pd
 
 class Optimizer:
     def __init__(self):
-        configs = load_configs()
+        configs = load_configs("Configs.json")
         self.width = configs["width"]
         self.height = configs["height"]
         self.buffer_size = configs["buffer_size"]
 
         self.buffer = Buffer(self.buffer_size)
         self.env = BlockRelocation(self.height, self.width)
-        self.model = ValueNetwork(height=self.height + 2, width=self.width, configs=configs)
-        self.policy_network = PolicyNetwork(height=self.height + 2, width=self.width, configs=configs)
+        self.model = ValueNetwork(configs=configs)
+        self.policy_network = PolicyNetwork(configs=configs)
         self.tree_searcher = TreeSearch(self.model, BlockRelocation(self.height, self.width), self.policy_network)
 
     def create_training_example(self, permutations=True, units=8):
@@ -150,7 +150,7 @@ class Optimizer:
 
         for _ in range(20):
             self.model.train_df(train_data)
-            self.model.evaluate_df(test_data)
+            #self.model.evaluate_df(test_data)
             #self.policy_network.train_df(train_data)
             #self.policy_network.evaluate_df(train_data)
         # self.policy_network.train_df(data)
@@ -166,7 +166,8 @@ if __name__ == "__main__":
     test = Optimizer()
     #test.reinforce(1)
     #test.test_value_network()
-    # test.train_on_new_instances(1)
+    #test.train_on_new_instances(1)
     # test.test_saving_data()
-    #test.test_training_on_csv()
-    test.create_training_example(permutations=False, units=12)
+    test.test_training_on_csv()
+    # learning to learn better than your teacher
+    # test.create_training_example(permutations=False, units=14)

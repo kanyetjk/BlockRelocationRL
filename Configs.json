@@ -12,12 +12,12 @@
   "exp_name": "example",
   "num_epochs": 10,
   "num_iter_per_epoch": 10,
-  "learning_rate": 0.001,
+  "learning_rate": 0.0075,
   "batch_size": 128,
   "beta1": 0.9,
   "beta2": 0.999,
   "epsilon": 1e-08,
 
-  "shared_weights": [3, 3],
-  "fully_connected": [200, 200, 200]
+  "shared_weights": [15, 10, 10],
+  "fully_connected": [50, 50, 50]
 }
