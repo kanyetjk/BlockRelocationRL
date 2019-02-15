@@ -27,10 +27,20 @@ class ApproximationModel(object):
         self.learning_rate = configs["learning_rate"]
         self.shared_weights = configs["shared_weights"]
         self.connected_layers = configs["fully_connected"]
-        self.name = "_LR_" + str(self.learning_rate) + "_BS_" + str(self.batch_size) + "_SH_" \
-                    + str(self.shared_weights[0]) + "_FC_" + str(self.connected_layers[0])
+        self.name = self.generate_tensorboard_name()
 
         self.current_model_size = self.width * self.height
+
+    def generate_tensorboard_name(self):
+        name = []
+        name += [str(x) for x in [self.width, self.height]]
+        name += ["SW"]
+        name += [str(x) for x in self.shared_weights]
+        name += ["FC"]
+        name += [str(x) for x in self.connected_layers]
+        name += [str(x) for x in [self.learning_rate, self.batch_size]]
+        name = "_".join(name)
+        return name
 
     def build_model_beginning(self, features):
         current_layer = features["x"]
@@ -109,7 +119,7 @@ class ApproximationModel(object):
         return self.model.predict(self.input_fn_predict(x))
 
     def evaluate(self, x, y):
-        return self.model.evaluate(self.input_fn_train(x, y, batch_size=128))
+        return self.model.evaluate(self.input_fn_train(x, y))
 
     def evaluate_df(self, df):
         X = self.prepare_state_data(df)
@@ -147,6 +157,7 @@ class PolicyNetwork(ApproximationModel):
         self.train(X, y)
 
     def model_fn(self, features, labels, mode):
+        print("wow")
         last_layer = self.build_model_beginning(features)
 
         num_output = self.width * (self.width-1)

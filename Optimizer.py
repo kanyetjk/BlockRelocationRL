@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 
 import numpy as np
 import pandas as pd
+import time
 
 
 class Optimizer:
@@ -24,10 +25,8 @@ class Optimizer:
 
     def create_training_example(self, permutations=True, units=8):
         matrix = self.env.create_instance_random(units)
-        print(matrix)
-        path = self.tree_searcher.find_path_2(matrix.copy(), search_depth=4)
-        print(path)
-
+        v1 = {"search_depth": 3, "epsilon": 0.03, "threshold": 0.05, "drop_percent": 0.75}
+        path = self.tree_searcher.find_path_2(matrix.copy(), **v1)
         # In case the solver can't solve it with the given depth, this function is called again
         if path is None:
             return self.create_training_example(permutations=permutations)
@@ -41,20 +40,20 @@ class Optimizer:
 
         return data, len(path)
 
-    def reinforce(self, iterations=20):
+    def reinforce(self, iterations=20, units=10):
         for x in range(iterations):
             print("Iteration " + str(x))
-            self.train_on_new_instances(50)
+            self.train_on_new_instances(50, units=units)
             old_sample = self.buffer.get_sample(950, remove=True)
             self.model.train_df(old_sample)
             self.policy_network.train_df(old_sample)
 
-    def train_on_new_instances(self, num=1):
+    def train_on_new_instances(self, num=1, units=10):
         data_list = []
         step_list = []
 
         for ii in range(num):
-            data, steps = self.create_training_example(permutations=True)
+            data, steps = self.create_training_example(permutations=True, units=units)
             data_list.append(data)
             step_list.append(steps)
 
@@ -108,20 +107,6 @@ class Optimizer:
         final_df = pd.concat(df_list, ignore_index=True)
         return final_df
 
-    def compare_model(self):
-        examples = self.tree_searcher.generate_basic_starting_data(num_examples=10)
-        X = examples.StateRepresentation.values
-        X = np.array([x.transpose().flatten() / 100 for x in X])
-
-        y = examples.Value
-        y = np.array([np.array([val], dtype=float) for val in y])
-        print(self.model.evaluate(X, y))
-
-        p = list(self.model.predict(X))
-        examples["predicted"] = p
-        print(X[-3].reshape(4, 6).transpose())
-        # print(examples.Value)
-        print(examples[["Value", "predicted"]])
 
     def train(self, next_examples=20, search_depth=3):
         # create training example
@@ -150,10 +135,35 @@ class Optimizer:
 
         for _ in range(20):
             self.model.train_df(train_data)
-            #self.model.evaluate_df(test_data)
+            self.model.evaluate_df(test_data)
             #self.policy_network.train_df(train_data)
             #self.policy_network.evaluate_df(train_data)
         # self.policy_network.train_df(data)
+
+    def evaluate_parameters(self):
+        v1 = {"search_depth": 3, "epsilon": 0.04, "threshold": 0.15, "drop_percent": 0.7}
+        v2 = {"search_depth": 3, "epsilon": 0.03, "threshold": 0.08, "drop_percent": 0.75}
+        v3 = {"search_depth": 3, "epsilon": 0.02, "threshold": 0.05, "drop_percent": 0.8}
+        v4 = {"search_depth": 3, "epsilon": 0.1, "threshold": 0.05, "drop_percent": 0.3}
+
+        version_list = [v1, v2, v3, v4]
+        results = [[] for _ in version_list]
+        times = [[] for _ in version_list]
+
+        for ii in range(10):
+            print(ii)
+            matrix = self.env.create_instance_random(10)
+            for i, version in enumerate(version_list):
+                print("___" + str(i))
+                start = time.time()
+                m = len(self.tree_searcher.find_path_2(matrix, **version))
+                end = time.time()
+                results[i].append(m)
+                times[i].append(end-start)
+
+        for i in range(len(results)):
+            print(results[i])
+            print(np.mean(times[i]))
 
     def training_process(self):
         # Train with 8 units,
@@ -164,10 +174,11 @@ class Optimizer:
 
 if __name__ == "__main__":
     test = Optimizer()
-    #test.reinforce(1)
+    #test.reinforce(10)
     #test.test_value_network()
     #test.train_on_new_instances(1)
     # test.test_saving_data()
-    test.test_training_on_csv()
+    #test.test_training_on_csv()
     # learning to learn better than your teacher
     # test.create_training_example(permutations=False, units=14)
+    test.evaluate_parameters()

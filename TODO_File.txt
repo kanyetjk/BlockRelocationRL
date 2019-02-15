@@ -1,7 +1,7 @@
 Stuff that is still TODO:
 
 Deep Learning Model:
-- Make Model Architecture dynamic
+- FIX POLICY NW EVALUATION
 - Combination both models
 - hooks
 - Have more metrics for evaluation
@@ -11,7 +11,6 @@ Environment:
 - Speed up??
 - don't disregard seen states when doing tree search - DONE (maybe not efficient)
 - Find a way to remove those stupid loops
-- Something fishy when solved, returns too many moves
 - When multiple moves lead to the solution take that into account for training the policy network
 
 Configs:
@@ -37,3 +36,5 @@ Evaluation:
 - Have perfect solutions to test on periodically to measure improvement:
     - measure: steps to optimality, time, visited nodes
 - Evaluate the Variance of the value function of all permutations -> should be as small as possible
+
+https://github.com/marcsto/rl/blob/master/src/fast_predict.py

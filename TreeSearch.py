@@ -10,17 +10,7 @@ class TreeSearch:
         self.env = block_relocation
         self.index_to_moves_dict = {}
 
-    def find_path_2(self, matrix, search_depth=4, moves_per_turn=2, epsilon=0.5, threshold=0.05):
-        # search depth maybe visited states
-        # set for seen states
-        # predict possible moves, add random epsilon value, pick values that get over the threshold
-        # make all moves, repeat with search_depth times
-        # evaluate all states -> move some steps to the best one, restart
-        # a better policy network should allow for a deeper evaluation
-        # have on big DataFrame and kick out all other moves after we chose an option
-        # the value function may not be that accurate or stable, maybe grouping by the first move and averaging
-        #  -> over all the results may be good, or not (maybe good to remove the weakest states
-
+    def find_path_2(self, matrix, search_depth=4, epsilon=0.3, threshold=0.1, drop_percent=0.6):
         self.env.matrix = matrix
         while self.env.can_remove_matrix(matrix):
             matrix = self.env.remove_container_from_matrix(matrix)
@@ -31,8 +21,18 @@ class TreeSearch:
         data = pd.DataFrame(columns=["StateRepresentation", "Move", "CurrentValue"])
         data = data.append({"StateRepresentation": matrix.copy(), "Move": [], "CurrentValue": 0}, ignore_index=True)
 
-        counter = - 5  # search depth
+        counter = -1 * search_depth  # search depth
         while not self.env.is_solved(matrix=matrix):
+
+            # stopping if no new states possible
+            if data.shape[0] == 0:
+                print("No paths found")
+                return
+
+            if counter > 12:
+                print(matrix)
+                return
+
             counter += 1
             policy = self.policy_network.predict_df(data)
             policy = list(policy)
@@ -66,11 +66,6 @@ class TreeSearch:
 
                 new_data.append(next_states)
 
-            # stopping if no new states possible
-            if len(new_data) == 0:
-                print("No paths found")
-                return
-
             # removing all the duplicates
             data = pd.concat(new_data, sort=False)
             data["hashed"] = data["StateRepresentation"].apply(lambda s: s.tostring())
@@ -86,16 +81,9 @@ class TreeSearch:
                 values = [x[0] for x in values]
                 data["StateValue"] = values
 
-                best_row_index = data.StateValue.idxmax()
-                best_row = data.loc[best_row_index, :]
-                best_move = best_row.Move[counter]
-                # print(best_row.StateRepresentation)
-
-                data["CurrentMove"] = data.Move.apply(lambda arr: arr[counter])
-                data = data[data.CurrentMove == best_move]
-                data = data.drop(columns="CurrentMove")
-                matrix = self.env.move_on_matrix(matrix, *best_move)
-
+                num_rows = int(data.shape[0] * (1-drop_percent))
+                num_rows = max(10, num_rows)
+                data = data.nlargest(num_rows, "StateValue")
         return
 
     def policy_vector_to_moves(self, vector, threshold, random_exploration_factor):
@@ -108,6 +96,9 @@ class TreeSearch:
         moves = []
         for index in branches:
             moves.append(self.index_to_moves(index))
+
+        if len(moves) is 0:
+            moves.append(np.argmax(vector))
 
         return moves
 
@@ -205,8 +196,12 @@ class TreeSearch:
 if __name__ == "__main__":
     from BlockRelocation import BlockRelocation
     from ApproximationModel import PolicyNetwork, ValueNetwork
+    from Utils import load_configs
 
-    val = ValueNetwork(height=6, width=4)
-    pol = PolicyNetwork(height=6, width=4)
+    configs = load_configs("Configs.json")
+    val = ValueNetwork(configs)
+    pol = PolicyNetwork(configs)
     test = TreeSearch(val, BlockRelocation(4, 4), pol)
-    print(test.find_path_2(test.env.create_instance_random(9)))
+    matrix = test.env.create_instance_random(10)
+    print(matrix)
+    print(test.find_path_2(matrix, search_depth=3))
