@@ -38,3 +38,4 @@ Evaluation:
 - Evaluate the Variance of the value function of all permutations -> should be as small as possible
 
 https://github.com/marcsto/rl/blob/master/src/fast_predict.py
+tf.train.get_global_step()

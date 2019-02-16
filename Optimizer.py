@@ -1,7 +1,7 @@
 from Buffer import Buffer
 from BlockRelocation import BlockRelocation
 from TreeSearch import TreeSearch
-from ApproximationModel import ValueNetwork, PolicyNetwork
+from ApproximationModel import ValueNetwork, PolicyNetwork, CombinedModel
 from Utils import load_configs
 from sklearn.model_selection import train_test_split
 
@@ -21,6 +21,7 @@ class Optimizer:
         self.env = BlockRelocation(self.height, self.width)
         self.model = ValueNetwork(configs=configs)
         self.policy_network = PolicyNetwork(configs=configs)
+        self.combined_model = CombinedModel(configs=configs)
         self.tree_searcher = TreeSearch(self.model, BlockRelocation(self.height, self.width), self.policy_network)
 
     def create_training_example(self, permutations=True, units=8):
@@ -134,10 +135,12 @@ class Optimizer:
         train_data, test_data = train_test_split(data, shuffle=True, test_size=0.25)
 
         for _ in range(20):
-            self.model.train_df(train_data)
-            self.model.evaluate_df(test_data)
+            #self.model.train_df(train_data)
+            #self.model.evaluate_df(test_data)
             #self.policy_network.train_df(train_data)
             #self.policy_network.evaluate_df(train_data)
+            self.combined_model.train_df(train_data)
+            self.combined_model.evaluate_df(test_data)
         # self.policy_network.train_df(data)
 
     def evaluate_parameters(self):
@@ -171,14 +174,33 @@ class Optimizer:
         # repeat
         pass
 
+    def find_best_parameters(self):
+        # create population of possibilities
+        # create 10 different matricies
+        # try out each possibility
+        # out of the ones with the fewest moves, pick the fastest
+        pass
+
+    def test_combinded_model(self):
+        """
+        matrix = self.env.create_instance_random(10)
+        m = matrix.transpose().flatten()
+        m = np.array([np.array(m) / 16])
+        a = self.combined_model.predict(m)
+        a = list(a)"""
+
+        a, moves = self.create_training_example()
+        self.combined_model.train_df(a)
+
 
 if __name__ == "__main__":
     test = Optimizer()
+    #test.test_combinded_model()
     #test.reinforce(10)
     #test.test_value_network()
     #test.train_on_new_instances(1)
     # test.test_saving_data()
-    #test.test_training_on_csv()
+    test.test_training_on_csv()
     # learning to learn better than your teacher
     # test.create_training_example(permutations=False, units=14)
-    test.evaluate_parameters()
+    #test.evaluate_parameters()

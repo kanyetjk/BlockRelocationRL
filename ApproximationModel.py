@@ -22,7 +22,7 @@ class ApproximationModel(object):
         self.steps_list = []
         self.max_value = configs["height"] * configs["width"]
 
-        self.num_epochs = 1
+        self.num_epochs = configs["num_epochs"]
         self.batch_size = configs["batch_size"]
         self.learning_rate = configs["learning_rate"]
         self.shared_weights = configs["shared_weights"]
@@ -103,7 +103,7 @@ class ApproximationModel(object):
     def input_fn_evaluate(self, x, y):
         input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'x': x}, y=y,
-            batch_size=self.batch_size, num_epochs=self.num_epochs, shuffle=False)
+            batch_size=self.batch_size, num_epochs=1, shuffle=False)
         return input_fn
 
     def train(self, x, y):
@@ -119,7 +119,7 @@ class ApproximationModel(object):
         return self.model.predict(self.input_fn_predict(x))
 
     def evaluate(self, x, y):
-        return self.model.evaluate(self.input_fn_train(x, y))
+        return self.model.evaluate(self.input_fn_evaluate(x, y))
 
     def evaluate_df(self, df):
         X = self.prepare_state_data(df)
@@ -157,7 +157,6 @@ class PolicyNetwork(ApproximationModel):
         self.train(X, y)
 
     def model_fn(self, features, labels, mode):
-        print("wow")
         last_layer = self.build_model_beginning(features)
 
         num_output = self.width * (self.width-1)
@@ -229,3 +228,107 @@ class ValueNetwork(ApproximationModel):
         y = df.Value
         y = np.array([np.array([val], dtype=float) for val in y])
         self.train(X, y)
+
+
+class CombinedModel(ApproximationModel):
+    def __init__(self, configs):
+        super().__init__(configs)
+        self.value_head = configs["value_head"]
+        self.policy_head = configs["policy_head"]
+        self.value_loss_factor = configs["value_loss_factor"]
+        self.name = self.finish_name()
+        self.model = tf.estimator.Estimator(self.model_fn, self.name)
+
+    def finish_name(self):
+        n = "TensorBoardFiles/CM" + self.name + "/"
+        added = ["VH"] + [str(x) for x in self.value_head]
+        added += ["PH"] + [str(x) for x in self.policy_head]
+        added = "_".join(added)
+        name = n + added
+        return name
+
+    def build_policy_head(self, input_tensor):
+        save_model_size = self.current_model_size
+
+        current_layer = input_tensor
+
+        for i, size in enumerate(self.policy_head):
+            current_layer = self.shared_layer(num_hidden=size, input_tensor=current_layer, layer_count=i+10)
+
+        num_output = self.width * (self.width-1)
+        output_layer = self.hidden_layer(num_hidden=num_output, input_tensor=current_layer, relu=False)
+
+        self.current_model_size = save_model_size
+
+        return output_layer
+
+    def build_value_head(self, input_tensor):
+        current_layer = input_tensor
+
+        for i, size in enumerate(self.value_head):
+            current_layer = self.shared_layer(num_hidden=size, input_tensor=current_layer, layer_count=i+20)
+
+        predicted_value = self.hidden_layer(num_hidden=1, input_tensor=current_layer, relu=False)
+        return predicted_value
+
+    def model_fn(self, features, labels, mode):
+        last_layer = self.build_model_beginning(features)
+
+        # build head for value network
+        policy_output = self.build_policy_head(last_layer)
+        percent_output = tf.nn.softmax(policy_output)
+
+        # build head for policy network
+        value_output = self.build_value_head(last_layer)
+
+        combined_output = tf.concat([value_output, percent_output], axis=1)
+        if mode == tf.estimator.ModeKeys.PREDICT:
+            return tf.estimator.EstimatorSpec(mode, predictions=combined_output)
+
+        labels_value = tf.slice(labels, [0, 0], [-1, 1])
+        labels_policy = tf.slice(labels, [0, 1], [-1, -1])
+
+        # Losses
+        policy_loss = tf.losses.softmax_cross_entropy(onehot_labels=labels_policy, logits=policy_output)
+        policy_loss = tf.dtypes.cast(policy_loss, tf.float32)
+
+        value_loss = tf.losses.mean_squared_error(labels=labels_value, predictions=value_output)
+
+        combined_loss = tf.reduce_mean(5 * value_loss + policy_loss)
+
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+        train_op = optimizer.minimize(combined_loss, global_step=tf.train.get_global_step())
+
+        # acc op for value
+        value_acc = tf.metrics.mean_absolute_error(labels=labels_value, predictions=value_output)
+        # acc op for policy
+        # TODO
+
+        estimator_specs = tf.estimator.EstimatorSpec(
+            mode=mode,
+            predictions=combined_output,
+            loss=combined_loss,
+            train_op=train_op,
+            eval_metric_ops={'MAE ValueNetwork': value_acc})
+
+        return estimator_specs
+
+    def prepare_data(self, df):
+        X = self.prepare_state_data(df)
+
+        y_1 = df.MovesEncoded
+        y_1 = np.array([np.array(val, dtype=float) for val in y_1])
+
+        y_2 = df.Value
+        y_2 = np.array([np.array([val], dtype=float) for val in y_2])
+        y = np.concatenate([y_2, y_1], axis=1)
+        return X, y
+
+    def train_df(self, df):
+        X, y = self.prepare_data(df)
+        self.train(X, y)
+
+    def evaluate_df(self, df):
+        X, y = self.prepare_data(df)
+        self.evaluate(X, y)
+
