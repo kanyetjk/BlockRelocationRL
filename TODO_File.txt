@@ -39,3 +39,4 @@ Evaluation:
 
 https://github.com/marcsto/rl/blob/master/src/fast_predict.py
 tf.train.get_global_step()
+    # learning to learn better than your teacher

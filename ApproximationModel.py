@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+from tensorflow.python import debug as tf_debug
 
 # TODO Load config from json
 
@@ -119,6 +120,8 @@ class ApproximationModel(object):
         return self.model.predict(self.input_fn_predict(x))
 
     def evaluate(self, x, y):
+        #hooks = [tf_debug.LocalCLIDebugHook(ui_type="readline")]
+        #return self.model.evaluate(self.input_fn_evaluate(x, y), hooks=hooks)
         return self.model.evaluate(self.input_fn_evaluate(x, y))
 
     def evaluate_df(self, df):
@@ -161,6 +164,7 @@ class PolicyNetwork(ApproximationModel):
 
         num_output = self.width * (self.width-1)
         output_layer = self.hidden_layer(num_hidden=num_output, input_tensor=last_layer, relu=False)
+        output_layer = tf.nn.leaky_relu(output_layer)
 
         percent_output = tf.nn.softmax(output_layer)
 
@@ -173,21 +177,23 @@ class PolicyNetwork(ApproximationModel):
 
         train_op = optimizer.minimize(loss_op, global_step=tf.train.get_global_step())
 
-        #TODO
-        #acc_op = tf.losses.softmax_cross_entropy(onehot_labels=labels, logits=percent_output)
-        classes = tf.math.argmax(labels,axis=1)
-        binary_prediction = tf.math.argmax(percent_output)
-        #accuracy = tf.metrics.accuracy(labels=labels, predictions=binary_prediction)
-        mean_per_class_accuracy = tf.metrics.mean_per_class_accuracy(labels=classes, predictions=percent_output,
-                                                                     num_classes=12)
+        policy_acc = tf.nn.softmax_cross_entropy_with_logits_v2(logits=output_layer, labels=labels)
+        policy_acc = tf.metrics.mean(policy_acc)
+
         estimator_specs = tf.estimator.EstimatorSpec(
             mode=mode,
             predictions=percent_output,
             loss=loss_op,
             train_op=train_op,
-            eval_metric_ops={'accuracy': mean_per_class_accuracy})
+            eval_metric_ops={'cross_entropy': policy_acc})
 
         return estimator_specs
+
+    def evaluate_df(self, df):
+        X = self.prepare_state_data(df)
+        y = df.MovesEncoded
+        y = np.array([np.array(val, dtype=float) for val in y])
+        self.evaluate(X, y)
 
 
 class ValueNetwork(ApproximationModel):
@@ -240,11 +246,11 @@ class CombinedModel(ApproximationModel):
         self.model = tf.estimator.Estimator(self.model_fn, self.name)
 
     def finish_name(self):
-        n = "TensorBoardFiles/CM" + self.name + "/"
+        n = "TensorBoardFiles/CM" + self.name
         added = ["VH"] + [str(x) for x in self.value_head]
         added += ["PH"] + [str(x) for x in self.policy_head]
         added = "_".join(added)
-        name = n + added
+        name = n + added + "/"
         return name
 
     def build_policy_head(self, input_tensor):
@@ -253,10 +259,11 @@ class CombinedModel(ApproximationModel):
         current_layer = input_tensor
 
         for i, size in enumerate(self.policy_head):
-            current_layer = self.shared_layer(num_hidden=size, input_tensor=current_layer, layer_count=i+10)
+            current_layer = self.hidden_layer(num_hidden=size, input_tensor=current_layer, layer_count=i+10)
 
         num_output = self.width * (self.width-1)
         output_layer = self.hidden_layer(num_hidden=num_output, input_tensor=current_layer, relu=False)
+        output_layer = tf.nn.leaky_relu(output_layer)
 
         self.current_model_size = save_model_size
 
@@ -266,7 +273,7 @@ class CombinedModel(ApproximationModel):
         current_layer = input_tensor
 
         for i, size in enumerate(self.value_head):
-            current_layer = self.shared_layer(num_hidden=size, input_tensor=current_layer, layer_count=i+20)
+            current_layer = self.hidden_layer(num_hidden=size, input_tensor=current_layer, layer_count=i+20)
 
         predicted_value = self.hidden_layer(num_hidden=1, input_tensor=current_layer, relu=False)
         return predicted_value
@@ -294,7 +301,7 @@ class CombinedModel(ApproximationModel):
 
         value_loss = tf.losses.mean_squared_error(labels=labels_value, predictions=value_output)
 
-        combined_loss = tf.reduce_mean(5 * value_loss + policy_loss)
+        combined_loss = tf.reduce_mean(value_loss + policy_loss)
 
         optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
         train_op = optimizer.minimize(combined_loss, global_step=tf.train.get_global_step())
@@ -302,14 +309,16 @@ class CombinedModel(ApproximationModel):
         # acc op for value
         value_acc = tf.metrics.mean_absolute_error(labels=labels_value, predictions=value_output)
         # acc op for policy
-        # TODO
+        policy_acc = tf.nn.softmax_cross_entropy_with_logits_v2(logits=policy_output, labels=labels_policy)
+        policy_acc = tf.metrics.mean(policy_acc)
 
         estimator_specs = tf.estimator.EstimatorSpec(
             mode=mode,
             predictions=combined_output,
             loss=combined_loss,
             train_op=train_op,
-            eval_metric_ops={'MAE ValueNetwork': value_acc})
+            eval_metric_ops={'mean_abs_error': value_acc,
+                             'cross_entropy': policy_acc})
 
         return estimator_specs
 
@@ -331,4 +340,64 @@ class CombinedModel(ApproximationModel):
     def evaluate_df(self, df):
         X, y = self.prepare_data(df)
         self.evaluate(X, y)
+
+
+from queue import Queue
+from threading import Thread
+
+
+class EstimatorWrapper:
+    def __init__(self, model):
+        self.model = model
+        self.input_queue = Queue(maxsize=1)
+        self.output_queue = Queue(maxsize=1)
+
+        self.prediction_thread = Thread(target=self.predict_from_queue, daemon=True)
+        self.prediction_thread.start()
+
+    def generate_from_queue(self):
+        """ Generator which yields items from the input queue.
+        This lives within our 'prediction thread'.
+        """
+
+        while True:
+            yield self.input_queue.get()
+
+    def predict_from_queue(self):
+        """ Adds a prediction from the model to the output_queue.
+        This lives within our 'prediction thread'.
+        Note: estimators accept generators as inputs and return generators as output.
+        Here, we are iterating through the output generator, which will be
+        populated in lock-step with the input generator.
+        """
+
+        for i in self.model.model.predict(input_fn=self.queued_predict_input_fn):
+            self.output_queue.put(i)
+
+    def predict_df(self, df):
+        # Get predictions dictionary
+        X = self.model.prepare_state_data(df)
+
+        for xx in X:
+            features = {"x": np.array([xx])}
+            self.input_queue.put(features)
+            predictions = self.output_queue.get()  # The latest predictions generator
+            yield predictions
+
+        return predictions
+
+    def queued_predict_input_fn(self):
+        """
+        Queued version of the `predict_input_fn` in FlowerClassifier.
+        Instead of yielding a dataset from data as a parameter,
+        we construct a Dataset from a generator,
+        which yields from the input queue.
+        """
+
+        # Fetch the inputs from the input queue
+        output_types = {'x': tf.float64}
+        dataset = tf.data.Dataset.from_generator(self.generate_from_queue, output_types=output_types)
+
+        return dataset
+
 

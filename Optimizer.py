@@ -1,7 +1,7 @@
 from Buffer import Buffer
 from BlockRelocation import BlockRelocation
 from TreeSearch import TreeSearch
-from ApproximationModel import ValueNetwork, PolicyNetwork, CombinedModel
+from ApproximationModel import ValueNetwork, PolicyNetwork, CombinedModel, EstimatorWrapper
 from Utils import load_configs
 from sklearn.model_selection import train_test_split
 
@@ -13,16 +13,24 @@ import time
 class Optimizer:
     def __init__(self):
         configs = load_configs("Configs.json")
+        value_configs = load_configs("Configs_ValueNN.json")
+        policy_configs = load_configs("Configs_PolicyNN.json")
         self.width = configs["width"]
         self.height = configs["height"]
         self.buffer_size = configs["buffer_size"]
 
         self.buffer = Buffer(self.buffer_size)
         self.env = BlockRelocation(self.height, self.width)
-        self.model = ValueNetwork(configs=configs)
-        self.policy_network = PolicyNetwork(configs=configs)
+        self.model = ValueNetwork(configs=value_configs)
+        self.policy_network = PolicyNetwork(configs=policy_configs)
         self.combined_model = CombinedModel(configs=configs)
         self.tree_searcher = TreeSearch(self.model, BlockRelocation(self.height, self.width), self.policy_network)
+
+        self.baseline_params = {"search_depth": 3, "epsilon": 0.1, "threshold": 0.05, "drop_percent": 0.3}
+        self.current_search_params = {"search_depth": 3, "epsilon": 0.1, "threshold": 0.05, "drop_percent": 0.3}
+
+        self.value_wrapper = EstimatorWrapper(self.model)
+        self.policy_wrapper = EstimatorWrapper(self.policy_network)
 
     def create_training_example(self, permutations=True, units=8):
         matrix = self.env.create_instance_random(units)
@@ -134,13 +142,14 @@ class Optimizer:
 
         train_data, test_data = train_test_split(data, shuffle=True, test_size=0.25)
 
-        for _ in range(20):
+        for ii in range(20):
             #self.model.train_df(train_data)
             #self.model.evaluate_df(test_data)
-            #self.policy_network.train_df(train_data)
-            #self.policy_network.evaluate_df(train_data)
-            self.combined_model.train_df(train_data)
-            self.combined_model.evaluate_df(test_data)
+            self.policy_network.train_df(train_data)
+            self.policy_network.evaluate_df(test_data)
+            #self.combined_model.train_df(train_data)
+            #self.combined_model.evaluate_df(test_data)
+            print(str(ii) + " done!")
         # self.policy_network.train_df(data)
 
     def evaluate_parameters(self):
@@ -175,7 +184,14 @@ class Optimizer:
         pass
 
     def find_best_parameters(self):
-        # create population of possibilities
+        base_line = []
+        matricies = [self.env.create_instance_random(10) for _ in range(10)]
+        for m in matricies:
+            start = time.time()
+            m = len(self.tree_searcher.find_path_2(matrix, **version))
+            end = time.time()
+
+
         # create 10 different matricies
         # try out each possibility
         # out of the ones with the fewest moves, pick the fastest
@@ -192,6 +208,21 @@ class Optimizer:
         a, moves = self.create_training_example()
         self.combined_model.train_df(a)
 
+    def test_wrapper(self):
+        a, moves = self.create_training_example()
+        start = time.time()
+        for _ in range(1):
+            print(list(self.model_wrapper.predict(a)))
+        end = time.time()
+        print(end-start)
+        start = time.time()
+        for _ in range(1):
+            print(list(self.model.predict_df(a)))
+        end = time.time()
+        print(end-start)
+
+
+
 
 if __name__ == "__main__":
     test = Optimizer()
@@ -204,3 +235,4 @@ if __name__ == "__main__":
     # learning to learn better than your teacher
     # test.create_training_example(permutations=False, units=14)
     #test.evaluate_parameters()
+    #test.test_wrapper()
