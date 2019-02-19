@@ -376,7 +376,9 @@ class EstimatorWrapper:
 
     def predict_df(self, df):
         # Get predictions dictionary
-        X = self.model.prepare_state_data(df)
+        X = df.StateRepresentation
+        X = [x.transpose().flatten() for x in X]
+        X = np.array([x / self.model.max_value for x in X])
 
         for xx in X:
             features = {"x": np.array([xx])}

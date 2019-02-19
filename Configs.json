@@ -2,15 +2,15 @@
   "width": 4,
   "height": 4,
 
-  "buffer_size": 20000,
+  "buffer_size": 2000000,
   "buffer_increase": 0.02,
 
   "simulations_per_training": 20,
   "percent_of_simulation": 0.1,
   "percent_of_buffer": 0.05,
 
-  "exp_name": "example",
-  "num_epochs": 10,
+  "log_name": "4x4_first_run.log",
+  "num_epochs": 5,
   "num_iter_per_epoch": 10,
   "learning_rate": 0.0075,
   "batch_size": 128,

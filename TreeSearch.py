@@ -10,7 +10,7 @@ class TreeSearch:
         self.env = block_relocation
         self.index_to_moves_dict = {}
 
-    def find_path_2(self, matrix, search_depth=4, epsilon=0.3, threshold=0.1, drop_percent=0.6):
+    def find_path_2(self, matrix, search_depth=4, epsilon=0.3, threshold=0.1, drop_percent=0.6, factor=0.1):
         self.env.matrix = matrix
         while self.env.can_remove_matrix(matrix):
             matrix = self.env.remove_container_from_matrix(matrix)
@@ -27,11 +27,11 @@ class TreeSearch:
             # stopping if no new states possible
             if data.shape[0] == 0:
                 print("No paths found")
-                return
+                return []
 
-            if counter > 12:
-                print(matrix)
-                return
+            if counter > 20:
+                print("Too many steps")
+                return range(20)
 
             counter += 1
             policy = self.policy_network.predict_df(data)
@@ -43,6 +43,7 @@ class TreeSearch:
                 state = row.StateRepresentation
                 moves = row.Move
                 policy = row.policy
+                threshold *= (factor + 1)
                 policy = self.policy_vector_to_moves(policy, threshold, epsilon)
 
                 # getting all the next states
@@ -67,6 +68,9 @@ class TreeSearch:
                 new_data.append(next_states)
 
             # removing all the duplicates
+            if len(new_data) is 0:
+                print("No Path found, Duplicates")
+                return []
             data = pd.concat(new_data, sort=False)
             data["hashed"] = data["StateRepresentation"].apply(lambda s: s.tostring())
             data = data[~data['hashed'].isin(seen_states)]
@@ -84,7 +88,9 @@ class TreeSearch:
                 num_rows = int(data.shape[0] * (1-drop_percent))
                 num_rows = max(10, num_rows)
                 data = data.nlargest(num_rows, "StateValue")
-        return
+        print("abc")
+
+        return []
 
     def policy_vector_to_moves(self, vector, threshold, random_exploration_factor):
         # print(vector)
@@ -98,7 +104,7 @@ class TreeSearch:
             moves.append(self.index_to_moves(index))
 
         if len(moves) is 0:
-            moves.append(np.argmax(vector))
+            moves.append(self.index_to_moves(np.argmax(vector)))
 
         return moves
 

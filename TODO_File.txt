@@ -1,8 +1,6 @@
 Stuff that is still TODO:
 
 Deep Learning Model:
-- FIX POLICY NW EVALUATION
-- Combination both models
 - hooks
 - Have more metrics for evaluation
 
@@ -25,6 +23,8 @@ Buffer:
 
 Optimizer:
 - Have a global step
+- Handle not solved better
+- Logging not working
 
 TreeSearch:
 - DFS
