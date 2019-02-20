@@ -10,7 +10,7 @@
   "percent_of_buffer": 0.05,
 
   "exp_name": "example",
-  "num_epochs": 10,
+  "num_epochs": 50,
   "num_iter_per_epoch": 10,
   "learning_rate": 0.005,
   "batch_size": 128,
@@ -18,8 +18,8 @@
   "beta2": 0.999,
   "epsilon": 1e-08,
 
-  "shared_weights": [32, 32],
-  "fully_connected": [128, 128, 32],
+  "shared_weights": [32, 16],
+  "fully_connected": [64, 32],
   "policy_head": [32],
   "value_head": [32],
   "value_loss_factor": 5

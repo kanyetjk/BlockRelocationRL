@@ -3,6 +3,7 @@ Stuff that is still TODO:
 Deep Learning Model:
 - hooks
 - Have more metrics for evaluation
+initial_epoch: Integer. Epoch at which to start training (useful for resuming a previous training run).
 
 Environment:
 - Matrix kind of sucks

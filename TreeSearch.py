@@ -53,7 +53,7 @@ class TreeSearch:
                 if "Solved" in next_states.columns:
                     next_states["Move"] = next_states["Move"].apply(lambda x: moves + x)
                     return next_states.Move[0]
-
+                # TODO is this used?
                 next_states["CurrentValue"] = np.zeros(next_states.shape[0])
 
                 if next_states.shape[0] == 0:
@@ -88,7 +88,7 @@ class TreeSearch:
                 num_rows = int(data.shape[0] * (1-drop_percent))
                 num_rows = max(10, num_rows)
                 data = data.nlargest(num_rows, "StateValue")
-        print("abc")
+        print(matrix)
 
         return []
 
