@@ -53,6 +53,11 @@ class KerasModel(object):
 
         return self.model.predict(x_data, batch_size=256)
 
+    def predict_single(self, matrix):
+        max_val = (self.height - 2) * self.width
+        x_data = np.array([matrix.transpose().flatten() / max_val])
+        return self.model.predict(x_data)[0]
+
 
 class ValueNetworkKeras(KerasModel):
     def __init__(self, configs):

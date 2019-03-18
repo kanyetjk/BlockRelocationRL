@@ -19,8 +19,5 @@
   "epsilon": 1e-08,
 
   "shared_weights": [32, 32],
-  "fully_connected": [64, 64, 32],
-  "policy_head": [32],
-  "value_head": [32],
-  "value_loss_factor": 5
+  "fully_connected": [64, 64, 32]
 }

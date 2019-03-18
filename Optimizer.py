@@ -38,7 +38,7 @@ class Optimizer:
 
         self.tree_searcher = TreeSearch(self.value_net, BlockRelocation(self.height, self.width), self.policy_net)
 
-        self.baseline_params = {"search_depth": 4,
+        self.baseline_params = {"search_depth": 5,
                                 "epsilon": 0.1,
                                 "threshold": 0.01,
                                 "drop_percent": 0.25,
@@ -50,16 +50,21 @@ class Optimizer:
                                       "drop_percent": 0.3,
                                       "factor": 0.05}
 
+        self.dfs_params_hq = {"stop_param": 3, "k": 10}
+        self.dfs_params_fast = {"stop_param": 2, "k": 7}
+
         logging.info("Start up process complete.")
 
-    def create_training_example(self, permutations=True, units=8):
+    def create_training_example(self, permutations=True, units=8, hq=False):
         if units < self.height * self.width:
             matrix = self.env.create_instance_random(units)
         else:
             matrix = self.env.create_instance(self.height, self.width)
-
-        v1 = self.current_search_params
-        path = self.tree_searcher.find_path_2(matrix.copy(), **v1)
+        if hq:
+            v1 = self.dfs_params_hq
+        else:
+            v1 = self.dfs_params_fast
+        path = self.tree_searcher.find_path_dfs(matrix.copy(), **v1)
         # In case the solver can't solve it with the given depth, this function is called again
         if not path:
             return self.create_training_example(permutations=permutations)
@@ -84,15 +89,13 @@ class Optimizer:
             #print(steps)
 
         data = pd.concat(data_list, ignore_index=True, sort=False)
-        with open('up_to_8.csv', 'a') as f:
-            data.to_csv(f, header=False, index=False)
-        mean_steps = np.mean(step_list)
+        #with open('up_to_8.csv', 'a') as f:
+         #   data.to_csv(f, header=False, index=False)
 
         train_data = data.sample(int(data.shape[0] / 3))  # Hardcoded
 
         self.value_net.train_df(train_data, epochs=1, validation=False)
         self.policy_net.train_df(train_data, epochs=1, validation=False)
-        #self.model.write_steps_summary(mean_steps)
 
         self.buffer.append(data)
 
@@ -144,7 +147,6 @@ class Optimizer:
 
     def training_on_csv(self):
         data = pd.read_csv("up_to_8.csv")
-        print(data.shape)
         data["StateRepresentation"] = data["StateRepresentation"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
         data["MovesEncoded"] = data["MovesEncoded"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
 
@@ -164,87 +166,8 @@ class Optimizer:
             #self.combined_model.evaluate_df(test_data)
             print(str(ii) + " done!")
 
-    def evaluate_parameters(self):
-        v1 = {"search_depth": 5, "epsilon": 0.01, "threshold": 0.07, "drop_percent": 0.7, "factor": 0.25}
-        v2 = {"search_depth": 4, "epsilon": 0.05, "threshold": 0.05, "drop_percent": 0.6, "factor": 0.15}
-        v3 = {"search_depth": 4, "epsilon": 0.1, "threshold": 0.05, "drop_percent": 0.7, "factor": 0.1}
-        v4 = {"search_depth": 5, "epsilon": 0.15, "threshold": 0.05, "drop_percent": 0.3, "factor": 0.01}
-
-        version_list = [v1, v2, v3, v4]
-        results = [[] for _ in version_list]
-        times = [[] for _ in version_list]
-
-        for ii in range(10):
-            print(ii)
-            matrix = self.env.create_instance_random(14)
-            for i, version in enumerate(version_list):
-                print("___" + str(i))
-                start = time.time()
-                m = len(self.tree_searcher.find_path_2(matrix, **version))
-                end = time.time()
-                results[i].append(m)
-                times[i].append(end-start)
-
-        for i in range(len(results)):
-            print(results[i])
-            print(np.mean(times[i]))
-
-    def find_best_parameters(self):
-        matrices = [self.env.create_instance(self.height, self.width) for _ in range(10)]
-        baseline_moves, baseline_seconds = self.evaluate_params(matrices, self.baseline_params)
-        print(baseline_moves, baseline_seconds)
-        new_params = self.baseline_params.copy()
-
-        for _ in range(25):
-            new_params["drop_percent"] *= 1.075
-            new_params["factor"] *= 1.015
-            new_params["threshold"] += 0.003
-            print(new_params)
-            current_moves, current_seconds = self.evaluate_params(matrices, new_params)
-            print(current_moves, current_seconds)
-
-    def evaluate_params(self, matrices_input, params):
-        moves = 0
-        start = time.time()
-        for m in matrices_input:
-            m = len(self.tree_searcher.find_path_2(m, **params))
-            moves += m
-        end = time.time()
-        seconds = end-start
-        return moves, seconds
-
-    def test_combinded_model(self):
-        """
-        matrix = self.env.create_instance_random(10)
-        m = matrix.transpose().flatten()
-        m = np.array([np.array(m) / 16])
-        a = self.combined_model.predict(m)
-        a = list(a)"""
-
-        a, moves = self.create_training_example()
-        self.combined_model.train_df(a)
-
-    def test_wrapper(self):
-
-        a, moves = self.create_training_example()
-        start = time.time()
-        for _ in range(25):
-            b= list(self.policy_network.predict_df(a))
-        end = time.time()
-        print(end-start)
-        start = time.time()
-        for _ in range(25):
-            b = list(self.policy_wrapper.predict_df(a))
-        end = time.time()
-        print(end-start)
-
-        start = time.time()
-        for _ in range(25):
-            b = list(self.keras_pn.predict_df(a))
-        end = time.time()
-        print(end-start)
-
     def reinforce(self, iterations=20, units=12):
+        print(f"Starting reinfoce with {iterations} iterations and {units} units.")
         for x in range(iterations):
             start = time.time()
             print("Iteration " + str(x))
@@ -259,31 +182,49 @@ class Optimizer:
         data = self.buffer.get_sample(size=self.buffer.max_size)
         self.policy_network.train_df(data)
         self.model.train_df(data)
-        self.value_wrapper = EstimatorWrapper(self.model)
-        self.policy_wrapper = EstimatorWrapper(self.policy_network)
-        self.tree_searcher = TreeSearch(self.value_wrapper, BlockRelocation(self.height, self.width),
-                                        self.policy_wrapper)
+
+    def warm_start_model(self):
+        data = pd.read_csv("train_.csv")
+        print(data.shape)
+        data["StateRepresentation"] = data["StateRepresentation"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
+        data["MovesEncoded"] = data["MovesEncoded"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
+
+        data["hashed"] = data["StateRepresentation"].apply(lambda s: s.tostring())
+        data = data.drop_duplicates(subset="hashed")
+        data = data.drop(columns=["hashed"])
+        data = data.reset_index(drop=True)
+        print(data.shape)
+        train_data, test_data = train_test_split(data, shuffle=True, test_size=0.25)
+
+        for i in range(5):
+            print(f"Currently on run {i} of warm up!")
+            self.policy_net.train_df(train_data)
+            self.value_net.train_df(train_data)
+
+        print(self.value_net.eval(test_data))
+        print(self.policy_net.eval(test_data))
+        print("Model warm up done!")
+
 
     def full_experiment(self):
-        """
+        self.warm_start_model()
+
         for ii in range(8, 13):
             logging.info(f"Training: Currently training on {ii} units.")
             self.reinforce(iterations=10, units=ii)
             self.train_and_update_models()
-        """
-        performance_test_matrices = [self.env.create_instance(self.height, self.width) for _ in range(20)]
-        test_params = {"search_depth": 5, "epsilon": 0.1, "threshold": 0.05, "drop_percent": 0.4, "factor": 0.015}
-        """
+
+
         for ii in range(13, 17):
             print(f"Currently training on: {ii} units.")
             logging.info(f"Training: Currently training on {ii} units.")
-            moves, seconds = self.evaluate_params(performance_test_matrices, test_params)
-            print(f"Moves: {moves}, seconds: {round(seconds, 2)}")
-            logging.info(f"Evaluation: Total Moves: {moves}, Total Seconds: {seconds}")
+            #moves, seconds = self.evaluate_params(performance_test_matrices, test_params)
+            #print(f"Moves: {moves}, seconds: {round(seconds, 2)}")
+            #logging.info(f"Evaluation: Total Moves: {moves}, Total Seconds: {seconds}")
             # find params
             self.reinforce(iterations=10, units=ii)
             #self.train_and_update_models()
-        """
+
 
         #self.buffer.storage.to_csv("4x4_data_first_half.csv", index=False)
         self.buffer = Buffer(self.buffer_size)
@@ -297,31 +238,28 @@ class Optimizer:
         # find best parameters
         # run experiment on test instances
 
-    def test_stupid_wrapper(self):
-        a, moves = self.create_training_example()
-        for _ in range(2):
-            print(list(self.value_wrapper.predict_df(a)))
-        value_configs = load_configs("Configs_ValueNN.json")
-        self.model = ValueNetwork(value_configs)
-        self.value_wrapper = EstimatorWrapper(self.model)
-        print(list(self.value_wrapper.predict_df(a)))
+    def produce_highq_data(self, filename, examples=10000, perm=True):
+        data_list = []
+        start = time.time()
+        for e in range(examples):
+            if e % 500 == 0 and e > 0:
+                final_df = pd.concat(data_list)
+                end = time.time()
+                with open(filename, 'a') as f:
+                    final_df.to_csv(f, header=False, index=False)
+                print(end - start)
 
-    def test_keras(self):
-        data = pd.read_csv("up_to_8.csv")
-        print(data.shape)
-        data["StateRepresentation"] = data["StateRepresentation"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
-        data["MovesEncoded"] = data["MovesEncoded"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
+                start = time.time()
+                data_list = []
 
-        data["hashed"] = data["StateRepresentation"].apply(lambda s: s.tostring())
-        data = data.drop_duplicates(subset="hashed")
-        data = data.drop(columns=["hashed"])
-        data = data.reset_index(drop=True)
-        print(data.shape)
+            data, length = self.create_training_example(permutations=perm, units=16)
+            data_list.append(data)
 
-        #self.keras_model = PolicyNetworkKeras(load_configs("Configs_PolicyNN.json"))
-        #self.keras_model.train_df(data)
-        self.keras_vn = ValueNetworkKeras(load_configs("Configs_ValueNN.json"))
-        self.keras_vn.train_df(data)
+        # in case number is not divisible by 500
+        final_df = pd.concat(data_list)
+        with open(filename, 'a') as f:
+            final_df.to_csv(f, header=False, index=False)
+
 
 if __name__ == "__main__":
     test = Optimizer()
@@ -330,11 +268,11 @@ if __name__ == "__main__":
     #test.test_value_network()
     #test.train_on_new_instances(1)
     #test.training_on_csv()
-    # learning to learn better than your teacher
-    # test.create_training_example(permutations=False, units=14)
     #test.evaluate_parameters()
     #test.test_wrapper()
     #test.find_best_parameters()
     test.full_experiment()
     #test.test_stupid_wrapper()
     #test.test_keras()
+    #test.produce_highq_data(filename="test_.csv", examples=2000, perm=False)
+

@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from functools import lru_cache
+from Utils import load_obj
 
 
 class TreeSearch:
@@ -9,8 +10,55 @@ class TreeSearch:
         self.policy_network = policy_network
         self.env = block_relocation
         self.index_to_moves_dict = {}
+        self.best_path = []
+        self.seen_states = {}
+        self.std_vals = load_obj("4x4_std")
+
+    def find_path_dfs(self, matrix, stop_param=1.5, k=10):
+        self.best_path = list(range(100))
+        self.seen_states = {}
+        while self.env.can_remove_matrix(matrix):
+            matrix = self.env.remove_container_from_matrix(matrix)
+
+        def dfs(matrix, current_path):
+            predicted_moves = self.model.predict_single(matrix)[0]
+            dict_access = min(round(predicted_moves), -1)
+
+            combined_val = -1 * predicted_moves - self.std_vals[dict_access] * stop_param
+            if len(current_path) + combined_val >= len(self.best_path) - 0.8:
+                return
+
+            moves_pred = self.policy_network.predict_single(matrix)
+            placeholder = list(range(len(moves_pred)))
+            sorted_moves = [x for _,x in sorted(zip(moves_pred,placeholder), reverse=True)]
+
+            for _ in range(k):
+                current_move = self.index_to_moves(sorted_moves.pop(0))
+                if not self.env.is_legal_move(current_move[0], current_move[1], matrix):
+                    continue
+
+                new_path = current_path.copy()
+                new_path.append(current_move)
+                new_state = self.env.move_on_matrix(matrix.copy(), *current_move)
+
+                state_hash = new_state.tostring()
+                if state_hash in self.seen_states:
+                    if len(new_path) >= self.seen_states[state_hash]:
+                        continue
+                self.seen_states[state_hash] = len(new_path)
+
+                if self.env.is_solved(new_state):
+                    if len(current_path) < len(self.best_path):
+                        self.best_path = new_path
+                dfs(new_state, new_path)
+
+        dfs(matrix, [])
+        return self.best_path
+
+
 
     def find_path_2(self, matrix, search_depth=4, epsilon=0.3, threshold=0.1, drop_percent=0.6, factor=0.1):
+        # BFS
         self.env.matrix = matrix
         while self.env.can_remove_matrix(matrix):
             matrix = self.env.remove_container_from_matrix(matrix)
