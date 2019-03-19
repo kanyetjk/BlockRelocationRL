@@ -52,7 +52,7 @@ class Optimizer:
                                       "drop_percent": 0.3,
                                       "factor": 0.05}
 
-        self.dfs_params_hq = {"stop_param": 3, "k": 10}
+        self.dfs_params_hq = {"stop_param": 4, "k": 12}
         self.dfs_params_fast = {"stop_param": 3, "k": 6}
 
         #logging.info("Start up process complete.")
@@ -244,6 +244,6 @@ if __name__ == "__main__":
     #test.full_experiment()
     #test.test_stupid_wrapper()
     #test.test_keras()
-    #test.produce_highq_data(filename="test_.csv", examples=2000, perm=False)
-    test.train_on_csv("up_to_8.csv")
+    test.produce_highq_data(filename="test.csv", examples=1000, perm=False)
+    #test.train_on_csv("up_to_8.csv")
 

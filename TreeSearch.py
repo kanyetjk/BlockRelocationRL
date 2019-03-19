@@ -27,7 +27,7 @@ class TreeSearch:
             dict_access = min(round(predicted_moves), -1)
 
             combined_val = -1 * predicted_moves - self.std_vals[dict_access] * stop_param
-            if len(current_path) + combined_val >= len(self.best_path) - 0.8:
+            if len(current_path) + combined_val >= len(self.best_path) - 1:
                 return
 
             moves_pred = self.policy_network.predict_single(matrix)

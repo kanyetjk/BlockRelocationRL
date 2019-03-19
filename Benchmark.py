@@ -79,7 +79,7 @@ class Benchmark(object):
 
     def benchmark_dfs(self):
         func = self.tree_searcher.find_path_dfs
-        params = {"stop_param": 2, "k": 6}
+        params = {"stop_param": 4, "k": 12}
         self.benchmark("BenchmarkInstances/4x4.npy", func, params, "DFS")
 
     def benchmark_bfs(self):
