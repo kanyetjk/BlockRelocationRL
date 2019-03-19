@@ -5,11 +5,13 @@ from ApproximationModel import ValueNetwork, PolicyNetwork, CombinedModel, Estim
 from Utils import load_configs
 from sklearn.model_selection import train_test_split
 from KerasModel import ValueNetworkKeras, PolicyNetworkKeras
+from Benchmark import Benchmark
+
 
 import numpy as np
 import pandas as pd
 import time
-import logging
+#import logging
 
 
 class Optimizer:
@@ -18,9 +20,9 @@ class Optimizer:
         value_configs = load_configs("Configs_ValueNN.json")
         policy_configs = load_configs("Configs_PolicyNN.json")
 
-        logging.basicConfig(format='%(asctime)s %(message)s', filename=configs["log_name"], level=logging.WARNING,
-                            datefmt="%Y-%m-%d %H:%M:%S")
-        logging.info("Starting Optimizer.")
+        #logging.basicConfig(format='%(asctime)s %(message)s', filename=configs["log_name"], level=logging.WARNING,
+                            #datefmt="%Y-%m-%d %H:%M:%S")
+        #logging.info("Starting Optimizer.")
 
         self.width = configs["width"]
         self.height = configs["height"]
@@ -51,9 +53,9 @@ class Optimizer:
                                       "factor": 0.05}
 
         self.dfs_params_hq = {"stop_param": 3, "k": 10}
-        self.dfs_params_fast = {"stop_param": 2, "k": 7}
+        self.dfs_params_fast = {"stop_param": 3, "k": 6}
 
-        logging.info("Start up process complete.")
+        #logging.info("Start up process complete.")
 
     def create_training_example(self, permutations=True, units=8, hq=False):
         if units < self.height * self.width:
@@ -89,8 +91,8 @@ class Optimizer:
             #print(steps)
 
         data = pd.concat(data_list, ignore_index=True, sort=False)
-        #with open('up_to_8.csv', 'a') as f:
-         #   data.to_csv(f, header=False, index=False)
+        with open('up_to_8.csv', 'a') as f:
+            data.to_csv(f, header=False, index=False)
 
         train_data = data.sample(int(data.shape[0] / 3))  # Hardcoded
 
@@ -134,38 +136,6 @@ class Optimizer:
         final_df = pd.concat(df_list, ignore_index=True)
         return final_df
 
-    def test_networks(self):
-        matrix = self.env.create_instance_random(12)
-        while self.env.can_remove_matrix(matrix):
-            matrix = self.env.remove_container_from_matrix(matrix)
-        print(matrix)
-        m = matrix.transpose().flatten()
-        m = np.array([np.array(m) / 16])
-        print(m)
-        print(list(self.model.predict(m)))
-        print(list(self.policy_network.predict(m)))
-
-    def training_on_csv(self):
-        data = pd.read_csv("up_to_8.csv")
-        data["StateRepresentation"] = data["StateRepresentation"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
-        data["MovesEncoded"] = data["MovesEncoded"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
-
-        data["hashed"] = data["StateRepresentation"].apply(lambda s: s.tostring())
-        data = data.drop_duplicates(subset="hashed")
-        data = data.drop(columns=["hashed"])
-        data = data.reset_index(drop=True)
-        print(data.shape)
-        train_data, test_data = train_test_split(data, shuffle=True, test_size=0.25)
-
-        for ii in range(20):
-            #self.model.train_df(train_data)
-            #self.model.evaluate_df(test_data)
-            self.policy_network.train_df(train_data)
-            self.policy_network.evaluate_df(test_data)
-            #self.combined_model.train_df(train_data)
-            #self.combined_model.evaluate_df(test_data)
-            print(str(ii) + " done!")
-
     def reinforce(self, iterations=20, units=12):
         print(f"Starting reinfoce with {iterations} iterations and {units} units.")
         for x in range(iterations):
@@ -180,11 +150,11 @@ class Optimizer:
 
     def train_and_update_models(self):
         data = self.buffer.get_sample(size=self.buffer.max_size)
-        self.policy_network.train_df(data)
-        self.model.train_df(data)
+        self.policy_net.train_df(data)
+        self.value_net.train_df(data)
 
-    def warm_start_model(self):
-        data = pd.read_csv("train_.csv")
+    def train_on_csv(self, filename):
+        data = pd.read_csv(filename)
         print(data.shape)
         data["StateRepresentation"] = data["StateRepresentation"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
         data["MovesEncoded"] = data["MovesEncoded"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
@@ -194,34 +164,34 @@ class Optimizer:
         data = data.drop(columns=["hashed"])
         data = data.reset_index(drop=True)
         print(data.shape)
-        train_data, test_data = train_test_split(data, shuffle=True, test_size=0.25)
+        train_data, test_data = train_test_split(data, shuffle=True, test_size=0.1)
 
         for i in range(5):
-            print(f"Currently on run {i} of warm up!")
+            print(f"Currently on run {i+1} of training.")
             self.policy_net.train_df(train_data)
             self.value_net.train_df(train_data)
 
-        print(self.value_net.eval(test_data))
-        print(self.policy_net.eval(test_data))
-        print("Model warm up done!")
+            print("Policy Network Statistics:")
+            print(self.value_net.eval(test_data))
 
+            print("Value Network Statistics:")
+            print(self.policy_net.eval(test_data))
+        print("Training finished!")
 
     def full_experiment(self):
-        self.warm_start_model()
-
+        self.train_on_csv("train_.csv")
+        """
         for ii in range(8, 13):
             logging.info(f"Training: Currently training on {ii} units.")
             self.reinforce(iterations=10, units=ii)
             self.train_and_update_models()
 
-
+        """
         for ii in range(13, 17):
             print(f"Currently training on: {ii} units.")
-            logging.info(f"Training: Currently training on {ii} units.")
-            #moves, seconds = self.evaluate_params(performance_test_matrices, test_params)
-            #print(f"Moves: {moves}, seconds: {round(seconds, 2)}")
-            #logging.info(f"Evaluation: Total Moves: {moves}, Total Seconds: {seconds}")
-            # find params
+            #logging.info(f"Training: Currently training on {ii} units.")
+            bm = Benchmark()
+            bm.benchmark_dfs()
             self.reinforce(iterations=10, units=ii)
             #self.train_and_update_models()
 
@@ -231,8 +201,8 @@ class Optimizer:
 
         for ii in range(10):
             print(f"Training with all units. Currently on iteration {ii+1}.")
-            moves, seconds = self.evaluate_params(performance_test_matrices, test_params)
-            print(f"Moves: {moves}, seconds: {round(seconds, 2)}")
+            bm = Benchmark()
+            bm.benchmark_dfs()
             self.reinforce(iterations=10, units=self.height*self.width)
 
         # find best parameters
@@ -271,8 +241,9 @@ if __name__ == "__main__":
     #test.evaluate_parameters()
     #test.test_wrapper()
     #test.find_best_parameters()
-    test.full_experiment()
+    #test.full_experiment()
     #test.test_stupid_wrapper()
     #test.test_keras()
     #test.produce_highq_data(filename="test_.csv", examples=2000, perm=False)
+    test.train_on_csv("up_to_8.csv")
 

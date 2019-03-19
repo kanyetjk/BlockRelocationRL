@@ -15,10 +15,6 @@ class Benchmark(object):
         value_configs = load_configs("Configs_ValueNN.json")
         policy_configs = load_configs("Configs_PolicyNN.json")
 
-        logging.basicConfig(format='%(asctime)s %(message)s', filename=configs["log_name"], level=logging.WARNING,
-                            datefmt="%Y-%m-%d %H:%M:%S")
-        logging.info("Starting Optimizer.")
-
         self.width = configs["width"]
         self.height = configs["height"]
         self.env = BlockRelocation(self.height, self.width)
@@ -27,7 +23,6 @@ class Benchmark(object):
         self.policy_net = PolicyNetworkKeras(policy_configs)
 
         self.tree_searcher = TreeSearch(self.value_net, BlockRelocation(self.height, self.width), self.policy_net)
-
 
     def create_benchmark_instances(self, n):
         matrices = [self.env.create_instance(self.height, self.width) for _ in range(n)]
@@ -50,8 +45,9 @@ class Benchmark(object):
         # logging the results
         self.log_results(times, steps, algorithm_type, params)
 
-    def log_results(self, times, steps, func_name, params):
-        LOG_FILENAME = "BenchmarkLogs/" +func_name + str(round(time.time())) + ".log"
+    @staticmethod
+    def log_results(times, steps, func_name, params):
+        LOG_FILENAME = "BenchmarkLogs/" + func_name + str(round(time.time())) + ".log"
 
         # Set up a specific logger with our desired output level
         my_logger = logging.getLogger('MyLogger')
@@ -62,6 +58,7 @@ class Benchmark(object):
             LOG_FILENAME)
         my_logger.addHandler(handler)
 
+        # Overview of the benchmark run
         my_logger.info("=== Results of Benchmark ===")
         my_logger.info(f"Function Type: {func_name}")
         my_logger.info(f"Parameter: {params}")
@@ -71,16 +68,18 @@ class Benchmark(object):
         my_logger.info(f"Average Steps: {round(np.mean(steps), 2)}")
         my_logger.info(f"Average Time: {round(np.mean(times), 2)} s")
 
+        # Individual steps and times
         my_logger.info("\n=== Individual Solutions ===")
         for i, t, num_steps in zip(range(len(times)), times, steps):
             my_logger.info(f"Instance: {i},   Steps: {num_steps},  time: {round(t,2)}")
 
-    def load_benchmark_instances(self, filename):
+    @staticmethod
+    def load_benchmark_instances(filename):
         return np.load(filename)
 
     def benchmark_dfs(self):
         func = self.tree_searcher.find_path_dfs
-        params = {"stop_param": 1.5, "k": 7}
+        params = {"stop_param": 2, "k": 6}
         self.benchmark("BenchmarkInstances/4x4.npy", func, params, "DFS")
 
     def benchmark_bfs(self):
@@ -92,5 +91,7 @@ class Benchmark(object):
                   "factor": 0.01}
         self.benchmark("BenchmarkInstances/4x4.npy", func, params, "BFS")
 
-bm = Benchmark()
-bm.benchmark_dfs()
+
+if __name__ == "__main__":
+    bm = Benchmark()
+    bm.benchmark_dfs()

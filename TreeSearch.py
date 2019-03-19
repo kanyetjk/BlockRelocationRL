@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from functools import lru_cache
 from Utils import load_obj
+import time
 
 
 class TreeSearch:
@@ -13,6 +14,7 @@ class TreeSearch:
         self.best_path = []
         self.seen_states = {}
         self.std_vals = load_obj("4x4_std")
+        self.total = 0
 
     def find_path_dfs(self, matrix, stop_param=1.5, k=10):
         self.best_path = list(range(100))
@@ -49,10 +51,16 @@ class TreeSearch:
 
                 if self.env.is_solved(new_state):
                     if len(current_path) < len(self.best_path):
+                        self.start = time.time()
                         self.best_path = new_path
                 dfs(new_state, new_path)
 
         dfs(matrix, [])
+        if len(self.best_path) == 100:
+            return []
+        end = time.time()
+        self.total += (end-self.start)
+        #print(self.total)
         return self.best_path
 
 

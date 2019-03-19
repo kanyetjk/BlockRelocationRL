@@ -1,9 +1,7 @@
 from keras.models import Model, load_model
 from keras.layers import Dense, Input, Concatenate, Lambda, regularizers, LeakyReLU, Softmax
 from keras.optimizers import Adam
-from Utils import load_configs
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
-#from keras.activations import softmax
 
 import numpy as np
 
@@ -28,6 +26,7 @@ class KerasModel(object):
         try:
             self.model.load_weights(filepath=self.dir + "/model.hdf5")
             print("Loading existing model.")
+            print(self.dir + "/model.hdf5")
         except OSError:
             print("No existing model found.")
 
@@ -238,3 +237,14 @@ class PolicyNetworkKeras(KerasModel):
                        callbacks=[self.tensorboard, self.saver],
                        validation_split=validation_split,
                        verbose=0)
+
+    def eval(self, data):
+        max_val = (self.height - 2) * self.width
+        x_data = data.StateRepresentation.values
+        x_data = np.array([x / max_val for x in x_data])
+
+        y = data.MovesEncoded
+        y = np.array([np.array(val, dtype=float) for val in y])
+
+        return self.model.evaluate(x_data, y,
+                                   batch_size=256)
