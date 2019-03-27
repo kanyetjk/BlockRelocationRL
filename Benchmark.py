@@ -60,13 +60,14 @@ class Benchmark(object):
 
         # Overview of the benchmark run
         my_logger.info("=== Results of Benchmark ===")
-        my_logger.info("Function Type: ", func_name)
-        my_logger.info("Parameter: ", str(params))
-        my_logger.info("Total Time: ", str(round(np.sum(times), 2)))
-        my_logger.info("Total Steps: ", str(np.sum(steps)))
-        my_logger.info("Max Time: ", str(round(max(times), 2)))
-        my_logger.info("Average Steps: ", str(round(np.mean(steps), 2)))
-        my_logger.info("Average Time: ", str(round(np.mean(times), 2)))
+        my_logger.info("Function Type: {}".format(func_name))
+        my_logger.info("Parameter: {}".format(params))
+        my_logger.info("Total Time: {}".format(round(np.sum(times), 2)))
+        my_logger.info("Total Steps: {}".format(np.sum(steps)))
+        my_logger.info("Max Time: {}".format(round(max(times), 2)))
+        my_logger.info("Average Steps: {}".format(round(np.mean(steps), 2)))
+
+        my_logger.info("Average Time: {}".format(round(np.mean(times), 2)))
 
         # Individual steps and times
         my_logger.info("\n=== Individual Solutions ===")
@@ -94,7 +95,7 @@ class Benchmark(object):
     def benchmark_caserta(self):
         matrices = load_caserta(4, 4)
         function = self.tree_searcher.find_path_dfs
-        params = {"stop_param": 5, "k": 12}
+        params = {"stop_param": 1, "k": 12}
         algorithm_type = "dfs"
 
         times = []
