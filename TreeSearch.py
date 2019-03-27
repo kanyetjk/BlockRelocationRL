@@ -32,9 +32,13 @@ class TreeSearch:
 
             moves_pred = self.policy_network.predict_single(matrix)
             placeholder = list(range(len(moves_pred)))
-            sorted_moves = [x for _,x in sorted(zip(moves_pred,placeholder), reverse=True)]
+            sorted_moves = [x for _, x in sorted(zip(moves_pred, placeholder), reverse=True)]
+            sorted_output = sorted(moves_pred, reverse=True)
+            #print(sorted_output)
 
-            for _ in range(k):
+            for i in range(k):
+                if sorted_output.pop(0) < 0.001:
+                    break
                 current_move = self.index_to_moves(sorted_moves.pop(0))
                 if not self.env.is_legal_move(current_move[0], current_move[1], matrix):
                     continue
@@ -62,8 +66,6 @@ class TreeSearch:
         self.total += (end-self.start)
         #print(self.total)
         return self.best_path
-
-
 
     def find_path_2(self, matrix, search_depth=4, epsilon=0.3, threshold=0.1, drop_percent=0.6, factor=0.1):
         # BFS

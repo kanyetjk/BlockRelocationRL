@@ -1,6 +1,6 @@
 from BlockRelocation import BlockRelocation
 from TreeSearch import TreeSearch
-from Utils import load_configs
+from Utils import load_configs, load_caserta
 from KerasModel import ValueNetworkKeras, PolicyNetworkKeras
 
 import numpy as np
@@ -71,7 +71,7 @@ class Benchmark(object):
         # Individual steps and times
         my_logger.info("\n=== Individual Solutions ===")
         for i, t, num_steps in zip(range(len(times)), times, steps):
-            my_logger.info(f"Instance: {i},   Steps: {num_steps},  time: {round(t,2)}")
+            my_logger.info(f"Instance: {i+1},   Steps: {num_steps},  time: {round(t,2)}")
 
     @staticmethod
     def load_benchmark_instances(filename):
@@ -79,7 +79,7 @@ class Benchmark(object):
 
     def benchmark_dfs(self):
         func = self.tree_searcher.find_path_dfs
-        params = {"stop_param": 4, "k": 12}
+        params = {"stop_param": 2, "k": 12}
         self.benchmark("BenchmarkInstances/4x4.npy", func, params, "DFS")
 
     def benchmark_bfs(self):
@@ -91,7 +91,29 @@ class Benchmark(object):
                   "factor": 0.01}
         self.benchmark("BenchmarkInstances/4x4.npy", func, params, "BFS")
 
+    def benchmark_caserta(self):
+        matrices = load_caserta(4, 4)
+        function = self.tree_searcher.find_path_dfs
+        params = {"stop_param": 5, "k": 12}
+        algorithm_type = "dfs"
+
+        times = []
+        steps = []
+        for i, m in enumerate(matrices):
+            if i > 1 and i % 10 == 0:
+                print(f"Done with {i}")
+            start = time.time()
+            num_steps = len(function(m, **params))
+            stop = time.time()
+            times.append(stop-start)
+            steps.append(num_steps)
+        print(times, steps)
+
+        # logging the results
+        self.log_results(times, steps, algorithm_type, params)
+
 
 if __name__ == "__main__":
     bm = Benchmark()
-    bm.benchmark_dfs()
+    #bm.benchmark_dfs()
+    bm.benchmark_caserta()
