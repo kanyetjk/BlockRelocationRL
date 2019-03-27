@@ -137,7 +137,7 @@ class Optimizer:
         return final_df
 
     def reinforce(self, iterations=20, units=12):
-        print(f"Starting reinfoce with {iterations} iterations and {units} units.")
+        print("Starting reinfoce with {} iterations and {} units.".format(iterations, units))
         for x in range(iterations):
             start = time.time()
             print("Iteration " + str(x))
@@ -167,7 +167,7 @@ class Optimizer:
         train_data, test_data = train_test_split(data, shuffle=True, test_size=0.1)
 
         for i in range(5):
-            print(f"Currently on run {i+1} of training.")
+            print("Currently on run {} of training.".format(i+1))
             self.policy_net.train_df(train_data)
             self.value_net.train_df(train_data)
 
@@ -182,14 +182,14 @@ class Optimizer:
         self.train_on_csv("train_.csv")
         """
         for ii in range(8, 13):
-            logging.info(f"Training: Currently training on {ii} units.")
+            logging.info("Training: Currently training on {} units.".format(ii)
             self.reinforce(iterations=10, units=ii)
             self.train_and_update_models()
 
         """
         for ii in range(13, 17):
-            print(f"Currently training on: {ii} units.")
-            #logging.info(f"Training: Currently training on {ii} units.")
+            print("Currently training on: {ii} units.")
+            #logging.info("Training: Currently training on {} units.".format(ii)
             bm = Benchmark()
             bm.benchmark_dfs()
             self.reinforce(iterations=10, units=ii)
@@ -200,7 +200,7 @@ class Optimizer:
         self.buffer = Buffer(self.buffer_size)
 
         for ii in range(10):
-            print(f"Training with all units. Currently on iteration {ii+1}.")
+            print("Training with all units. Currently on iteration ", str(ii+1))
             bm = Benchmark()
             bm.benchmark_dfs()
             self.reinforce(iterations=10, units=self.height*self.width)

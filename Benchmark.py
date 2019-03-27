@@ -34,7 +34,7 @@ class Benchmark(object):
         steps = []
         for i, m in enumerate(matrices):
             if i > 1 and i % 10 == 0:
-                print(f"Done with {i}")
+                print("Done with ", str(i))
             start = time.time()
             num_steps = len(function(m, **params))
             stop = time.time()
@@ -60,18 +60,18 @@ class Benchmark(object):
 
         # Overview of the benchmark run
         my_logger.info("=== Results of Benchmark ===")
-        my_logger.info(f"Function Type: {func_name}")
-        my_logger.info(f"Parameter: {params}")
-        my_logger.info(f"Total Time: {round(np.sum(times), 2)} s")
-        my_logger.info(f"Total Steps: {np.sum(steps)} steps")
-        my_logger.info(f"Max Time: {round(max(times), 2)}")
-        my_logger.info(f"Average Steps: {round(np.mean(steps), 2)}")
-        my_logger.info(f"Average Time: {round(np.mean(times), 2)} s")
+        my_logger.info("Function Type: ", func_name)
+        my_logger.info("Parameter: ", str(params))
+        my_logger.info("Total Time: ", str(round(np.sum(times), 2)))
+        my_logger.info("Total Steps: ", str(np.sum(steps)))
+        my_logger.info("Max Time: ", str(round(max(times), 2)))
+        my_logger.info("Average Steps: ", str(round(np.mean(steps), 2)))
+        my_logger.info("Average Time: ", str(round(np.mean(times), 2)))
 
         # Individual steps and times
         my_logger.info("\n=== Individual Solutions ===")
         for i, t, num_steps in zip(range(len(times)), times, steps):
-            my_logger.info(f"Instance: {i+1},   Steps: {num_steps},  time: {round(t,2)}")
+            my_logger.info("Instance: {},   Steps: {},  time: {}".format(i, num_steps, t))
 
     @staticmethod
     def load_benchmark_instances(filename):
@@ -101,7 +101,7 @@ class Benchmark(object):
         steps = []
         for i, m in enumerate(matrices):
             if i > 1 and i % 10 == 0:
-                print(f"Done with {i}")
+                print("Done with ", str(i))
             start = time.time()
             num_steps = len(function(m, **params))
             stop = time.time()
