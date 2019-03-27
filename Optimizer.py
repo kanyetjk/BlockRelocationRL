@@ -148,6 +148,7 @@ class Optimizer:
             end = time.time()
             #print(end-start)
 
+
     def train_and_update_models(self):
         data = self.buffer.get_sample(size=self.buffer.max_size)
         self.policy_net.train_df(data)
