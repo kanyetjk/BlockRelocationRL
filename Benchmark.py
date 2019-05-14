@@ -80,7 +80,7 @@ class Benchmark(object):
 
     def benchmark_dfs(self):
         func = self.tree_searcher.find_path_dfs
-        params = {"stop_param": 2, "k": 12}
+        params = {"stop_param": 4, "k": 12}
         self.benchmark("BenchmarkInstances/4x4.npy", func, params, "DFS")
 
     def benchmark_bfs(self):
@@ -93,9 +93,9 @@ class Benchmark(object):
         self.benchmark("BenchmarkInstances/4x4.npy", func, params, "BFS")
 
     def benchmark_caserta(self):
-        matrices = load_caserta(4, 4)
+        matrices = load_caserta(self.width, self.height)
         function = self.tree_searcher.find_path_dfs
-        params = {"stop_param": 1, "k": 12}
+        params = {"stop_param": 6, "k": 12}
         algorithm_type = "dfs"
 
         times = []
@@ -113,9 +113,29 @@ class Benchmark(object):
         # logging the results
         self.log_results(times, steps, algorithm_type, params)
 
+    def test_performance(self, units):
+        matrices = [self.env.create_instance_random(units) for _ in range(1)]
+        """
+        start = time.time()
+        num_steps = 0
+        for m in matrices:
+            num_steps += len(self.tree_searcher.find_path_2(m))
+        stop = time.time()
+        print(stop-start)
+        print(num_steps)
+        """
+
+        start = time.time()
+        num_steps = 0
+        for m in matrices:
+            num_steps += len(self.tree_searcher.find_path_dfs(m, stop_param=1, k=10))
+        stop = time.time()
+        print(stop - start)
+        print(num_steps)
 
 if __name__ == "__main__":
     bm = Benchmark()
     #bm.benchmark_dfs()
     bm.benchmark_caserta()
+    #bm.test_performance(25)
 

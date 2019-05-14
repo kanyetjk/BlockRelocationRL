@@ -16,15 +16,26 @@ class TreeSearch:
         self.std_vals = load_obj("4x4_std")
         self.total = 0
 
-    def find_path_dfs(self, matrix, stop_param=1.5, k=10):
+    def find_path_dfs(self, matrix, stop_param=1, k=10, time_limit=10, max_steps=30):
         self.best_path = list(range(100))
         self.seen_states = {}
+        self.start = time.time()
         while self.env.can_remove_matrix(matrix):
             matrix = self.env.remove_container_from_matrix(matrix)
 
         def dfs(matrix, current_path):
+            self.end = time.time()
+            if self.end - self.start > time_limit:
+                #print("Time Limit Up")
+                return
+            if len(current_path) > max_steps:
+                #print("Path Too Long")
+                return
+
             predicted_moves = self.model.predict_single(matrix)[0]
             dict_access = min(round(predicted_moves), -1)
+            if dict_access not in self.std_vals:
+                dict_access = min(self.std_vals.keys())
 
             combined_val = -1 * predicted_moves - self.std_vals[dict_access] * stop_param
             if len(current_path) + combined_val >= len(self.best_path) - 1:
@@ -146,7 +157,7 @@ class TreeSearch:
                 num_rows = int(data.shape[0] * (1-drop_percent))
                 num_rows = max(10, num_rows)
                 data = data.nlargest(num_rows, "StateValue")
-        print(matrix)
+        #print(matrix)
 
         return []
 

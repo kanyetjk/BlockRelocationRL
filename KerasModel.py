@@ -74,7 +74,7 @@ class ValueNetworkKeras(KerasModel):
         return name
 
     def build_model(self):
-        inputArray = Input(shape=(24,))
+        inputArray = Input(shape=(self.width * (self.height),))
 
         layer = inputArray
 
@@ -175,7 +175,7 @@ class PolicyNetworkKeras(KerasModel):
 
     def build_model(self):
         # input layer
-        input_array = Input(shape=(24,))
+        input_array = Input(shape=(self.width * self.height,))
         layer = input_array
 
         # first shared layer

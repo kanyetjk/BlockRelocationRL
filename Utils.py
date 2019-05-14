@@ -9,9 +9,20 @@ def load_configs(filename):
         return json.load(json_data)
 
 
-def load_obj(name ):
-    with open(name + '.pkl', 'rb') as f:
-        return pickle.load(f)
+def load_obj(name):
+    try:
+        with open(name + '.pkl', 'rb') as f:
+            return pickle.load(f)
+    except FileNotFoundError:
+        d = {}
+        for ii in range(-99, 0):
+            d[ii] = 1
+        return d
+
+
+def save_obj(file, name):
+    with open(name + '.pkl', 'wb') as f:
+        pickle.dump(file, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def load_benchmark_instances(filename, height):

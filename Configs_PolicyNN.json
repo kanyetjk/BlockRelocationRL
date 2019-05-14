@@ -1,6 +1,6 @@
 {
-  "width": 4,
-  "height": 4,
+  "width": 5,
+  "height": 5,
 
   "buffer_size": 20000,
   "buffer_increase": 0.02,
@@ -9,7 +9,7 @@
   "percent_of_simulation": 0.1,
   "percent_of_buffer": 0.05,
 
-  "exp_name": "example",
+  "exp_name": "example_5x5",
   "num_epochs": 10,
   "num_iter_per_epoch": 10,
   "learning_rate": 0.01,

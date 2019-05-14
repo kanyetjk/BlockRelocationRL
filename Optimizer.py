@@ -2,7 +2,7 @@ from Buffer import Buffer
 from BlockRelocation import BlockRelocation
 from TreeSearch import TreeSearch
 from ApproximationModel import ValueNetwork, PolicyNetwork, CombinedModel, EstimatorWrapper
-from Utils import load_configs
+from Utils import load_configs, load_obj, save_obj
 from sklearn.model_selection import train_test_split
 from KerasModel import ValueNetworkKeras, PolicyNetworkKeras
 from Benchmark import Benchmark
@@ -28,6 +28,9 @@ class Optimizer:
         self.height = configs["height"]
         self.buffer_size = configs["buffer_size"]
 
+        self.filename = configs["data_filename"]
+        self.experiment_name = "Deviations/" + configs["val_filename"]
+
         self.buffer = Buffer(self.buffer_size)
         self.env = BlockRelocation(self.height, self.width)
         #self.model = ValueNetwork(configs=value_configs)
@@ -39,6 +42,7 @@ class Optimizer:
         self.policy_net = PolicyNetworkKeras(policy_configs)
 
         self.tree_searcher = TreeSearch(self.value_net, BlockRelocation(self.height, self.width), self.policy_net)
+        self.tree_searcher.std_vals = load_obj(self.experiment_name)
 
         self.baseline_params = {"search_depth": 5,
                                 "epsilon": 0.1,
@@ -53,7 +57,7 @@ class Optimizer:
                                       "factor": 0.05}
 
         self.dfs_params_hq = {"stop_param": 4, "k": 12}
-        self.dfs_params_fast = {"stop_param": 4, "k": 12}
+        self.dfs_params_fast = {"stop_param": 1, "k": 12}
 
         #logging.info("Start up process complete.")
 
@@ -66,7 +70,12 @@ class Optimizer:
             v1 = self.dfs_params_hq
         else:
             v1 = self.dfs_params_fast
-        path = self.tree_searcher.find_path_dfs(matrix.copy(), **v1)
+
+        if units < 10:
+            path = self.tree_searcher.find_path_2(matrix)
+        else:
+            path = self.tree_searcher.find_path_dfs(matrix.copy())
+
         # In case the solver can't solve it with the given depth, this function is called again
         if not path:
             return self.create_training_example(permutations=permutations)
@@ -91,7 +100,10 @@ class Optimizer:
             #print(steps)
 
         data = pd.concat(data_list, ignore_index=True, sort=False)
-        with open('up_to_8.csv', 'a') as f:
+
+        self.calculate_deviations(data)
+
+        with open(self.filename, 'a') as f:
             data.to_csv(f, header=False, index=False)
 
         train_data = data.sample(int(data.shape[0] / 3))  # Hardcoded
@@ -100,6 +112,36 @@ class Optimizer:
         self.policy_net.train_df(train_data, epochs=1, validation=False)
 
         self.buffer.append(data)
+
+    def calculate_deviations(self, data):
+        data = data.copy()
+        data["pred"] = list(self.value_net.predict_df(data))
+        data["pred"] = data["pred"].apply(lambda x: x[0])
+        data["Value"] = data["Value"].astype('int64')
+        data["deviation"] = abs(data["pred"] - data["Value"])
+
+        deviations = data.groupby("Value")["deviation"].mean()
+
+        new_vals = deviations.to_dict()
+        old_vals = self.tree_searcher.std_vals
+
+        for key in new_vals.keys():
+            if key not in old_vals:
+                old_vals[key] = new_vals[key]
+            else:
+                old_vals[key] = (old_vals[key] + new_vals[key]) / 2
+
+        self.tree_searcher.std_vals = old_vals
+        save_obj(old_vals, self.experiment_name)
+        return old_vals
+
+    def test_deviations(self):
+        for i in range(10):
+            data, steps = self.create_training_example(units=11)
+            print(steps)
+        print("DONE")
+        #print(self.calculate_deviations(data))
+
 
     def prepare_data_for_model(self, data):
         # TODO DONT WANT TO CHANGE THE COLUMN NAME HERE
@@ -146,7 +188,7 @@ class Optimizer:
             self.policy_net.train_df(old_sample, epochs=1, validation=False)
             self.value_net.train_df(old_sample, epochs=1, validation=False)
             end = time.time()
-            #print(end-start)
+            print(end-start)
 
 
     def train_and_update_models(self):
@@ -180,17 +222,16 @@ class Optimizer:
         print("Training finished!")
 
     def full_experiment(self):
-        self.train_on_csv("train_.csv")
-        """
-        for ii in range(8, 13):
-            logging.info("Training: Currently training on {} units.".format(ii)
+        #self.train_on_csv(self.filename)
+
+        total_container = self.width * self.height
+        for ii in range(22, 25):
+            print("Training: Currently training on {} units.".format(ii))
             self.reinforce(iterations=10, units=ii)
             self.train_and_update_models()
 
-        """
-        for ii in range(13, 17):
+        for ii in range(total_container-5, total_container):
             print("Currently training on: {ii} units.")
-            #logging.info("Training: Currently training on {} units.".format(ii)
             bm = Benchmark()
             bm.benchmark_dfs()
             self.reinforce(iterations=10, units=ii)
@@ -247,4 +288,5 @@ if __name__ == "__main__":
     #test.test_keras()
     #test.produce_highq_data(filename="test.csv", examples=1000, perm=False)
     #test.train_on_csv("up_to_8.csv")
+    #test.test_deviations()
 

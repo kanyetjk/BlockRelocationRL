@@ -28,8 +28,6 @@ Optimizer:
 - Logging not working
 
 TreeSearch:
-- DFS
-- BFS
 - Beam Search?
 - Combination of DFS and BFS
 
