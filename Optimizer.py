@@ -80,7 +80,11 @@ class Optimizer:
         if not path:
             return self.create_training_example(permutations=permutations)
 
-        data = self.tree_searcher.move_along_path(matrix.copy(), path)
+        try:
+            data = self.tree_searcher.move_along_path(matrix.copy(), path)
+        except TypeError:
+            print(path)
+            return self.create_training_example(permutations=permutations)
 
         if permutations:
             data = self.create_permutations(data)
