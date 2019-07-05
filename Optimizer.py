@@ -225,7 +225,7 @@ class Optimizer:
         #self.train_on_csv(self.filename)
 
         total_container = self.width * self.height
-        for ii in range(22, 25):
+        for ii in range(23, 25):
             print("Training: Currently training on {} units.".format(ii))
             self.reinforce(iterations=10, units=ii)
             self.train_and_update_models()

@@ -3,6 +3,7 @@ import pandas as pd
 from functools import lru_cache
 from Utils import load_obj
 import time
+from collections import deque
 
 
 class TreeSearch:
@@ -16,6 +17,65 @@ class TreeSearch:
         self.std_vals = load_obj("4x4_std")
         self.total = 0
 
+    def iterative_dfs(self, matrix, stop_param=1, cutoff_param=0.1, k=10, time_limit=10, max_steps=30):
+        self.best_path = list(range(100))
+        self.seen_states = {}
+        self.start_time = time.time()
+        self.next_nodes = deque([(matrix, [])])
+
+        def dfs(matrix, current_path):
+            if len(current_path) > max_steps:
+                #print("Path Too Long")
+                return
+
+            predicted_moves = self.model.predict_single(matrix)[0]
+            dict_access = min(round(predicted_moves), -1)
+            if dict_access not in self.std_vals:
+                dict_access = min(self.std_vals.keys())
+
+            combined_val = -1 * predicted_moves - self.std_vals[dict_access] * stop_param
+            if len(current_path) + combined_val >= len(self.best_path) - 1:
+                return
+
+            moves_pred = self.policy_network.predict_single(matrix)
+            placeholder = list(range(len(moves_pred)))
+            sorted_moves = [x for _, x in sorted(zip(moves_pred, placeholder), reverse=True)]
+            sorted_output = sorted(moves_pred, reverse=True)
+
+            sorted_moves = sorted_moves[:k]
+            sorted_output = sorted_output[:k]
+            while sorted_output:
+                current_move = self.index_to_moves(sorted_moves.pop())
+                if sorted_output.pop() < cutoff_param:
+                    continue
+
+                if not self.env.is_legal_move(current_move[0], current_move[1], matrix):
+                    continue
+
+                new_path = current_path.copy()
+                new_path.append(current_move)
+                new_state = self.env.move_on_matrix(matrix.copy(), *current_move)
+
+                state_hash = new_state.tostring()
+                if state_hash in self.seen_states:
+                    if len(new_path) >= self.seen_states[state_hash]:
+                        continue
+                self.seen_states[state_hash] = len(new_path)
+
+                if self.env.is_solved(new_state):
+                    if len(current_path) < len(self.best_path):
+                        self.start = time.time()
+                        self.best_path = new_path
+
+                self.next_nodes.append((new_state, new_path))
+
+        while self.next_nodes and time.time() - self.start_time < 10:
+            m, path = self.next_nodes.pop()
+            dfs(matrix=m, current_path=path)
+
+        return self.best_path
+
+
     def find_path_dfs(self, matrix, stop_param=1, k=10, time_limit=10, max_steps=30):
         self.best_path = list(range(100))
         self.seen_states = {}
@@ -25,8 +85,10 @@ class TreeSearch:
 
         def dfs(matrix, current_path):
             self.end = time.time()
+
             if self.end - self.start > time_limit:
                 #print("Time Limit Up")
+                #print(self.end - self.start)
                 return
             if len(current_path) > max_steps:
                 #print("Path Too Long")
@@ -48,7 +110,7 @@ class TreeSearch:
             #print(sorted_output)
 
             for i in range(k):
-                if sorted_output.pop(0) < 0.001:
+                if sorted_output.pop(0) < 0.001 or time.time() - self.start > 10:
                     break
                 current_move = self.index_to_moves(sorted_moves.pop(0))
                 if not self.env.is_legal_move(current_move[0], current_move[1], matrix):

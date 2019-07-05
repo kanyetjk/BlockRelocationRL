@@ -74,7 +74,7 @@ class ValueNetworkKeras(KerasModel):
         return name
 
     def build_model(self):
-        inputArray = Input(shape=(self.width * (self.height),))
+        inputArray = Input(shape=(self.width * self.height,))
 
         layer = inputArray
 
