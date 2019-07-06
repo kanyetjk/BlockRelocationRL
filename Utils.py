@@ -38,7 +38,8 @@ def load_benchmark_instances(filename, height):
                 col.append(0)
 
     m = np.flip(np.array(m).transpose(), axis=0)
-    padding = np.zeros([2,height])
+    width = m.shape[1]
+    padding = np.zeros([2, width])
     m = np.concatenate((padding, m), axis=0)
     return m
 
@@ -59,6 +60,6 @@ def load_caserta(width, height):
 
 
 if __name__ == "__main__":
-    load_caserta(3,3)
-    a = load_benchmark_instances("OfficalBenchmarkInstances/CRPTestcases_Caserta/data3-3-1.dat", 3)
-    print(a)
+    load_caserta(4,3)
+    #a = load_benchmark_instances("OfficalBenchmarkInstances/CRPTestcases_Caserta/data3-3-1.dat", 3)
+    #print(a)

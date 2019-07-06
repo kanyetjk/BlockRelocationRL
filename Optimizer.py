@@ -71,7 +71,7 @@ class Optimizer:
         else:
             v1 = self.dfs_params_fast
 
-        if units < 10:
+        if units < 5:
             path = self.tree_searcher.find_path_2(matrix)
         else:
             path = self.tree_searcher.find_path_dfs(matrix.copy())
@@ -248,7 +248,7 @@ class Optimizer:
         for ii in range(10):
             print("Training with all units. Currently on iteration ", str(ii+1))
             bm = Benchmark()
-            bm.benchmark_dfs()
+            bm.benchmark_caserta()
             self.reinforce(iterations=10, units=self.height*self.width)
 
         # find best parameters
