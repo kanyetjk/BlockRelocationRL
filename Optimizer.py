@@ -66,10 +66,6 @@ class Optimizer:
             matrix = self.env.create_instance_random(units)
         else:
             matrix = self.env.create_instance(self.height, self.width)
-        if hq:
-            v1 = self.dfs_params_hq
-        else:
-            v1 = self.dfs_params_fast
 
         if units < 5:
             path = self.tree_searcher.find_path_2(matrix)
@@ -78,13 +74,12 @@ class Optimizer:
 
         # In case the solver can't solve it with the given depth, this function is called again
         if not path:
-            return self.create_training_example(permutations=permutations)
+            return self.create_training_example(permutations=permutations, units=units)
 
         try:
             data = self.tree_searcher.move_along_path(matrix.copy(), path)
         except TypeError:
-            print(path)
-            return self.create_training_example(permutations=permutations)
+            return self.create_training_example(permutations=permutations, units=units)
 
         if permutations:
             data = self.create_permutations(data)

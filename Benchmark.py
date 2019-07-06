@@ -24,10 +24,6 @@ class Benchmark(object):
 
         self.tree_searcher = TreeSearch(self.value_net, BlockRelocation(self.height, self.width), self.policy_net)
 
-    def create_benchmark_instances(self, n):
-        matrices = [self.env.create_instance(self.height, self.width) for _ in range(n)]
-        np.save("BenchmarkInstances/4x4", matrices)
-
     def benchmark(self, filename, function, params, algorithm_type):
         matrices = self.load_benchmark_instances(filename)
         times = []
@@ -78,23 +74,9 @@ class Benchmark(object):
     def load_benchmark_instances(filename):
         return np.load(filename)
 
-    def benchmark_dfs(self):
-        func = self.tree_searcher.find_path_dfs
-        params = {"stop_param": 4, "k": 12}
-        self.benchmark("BenchmarkInstances/4x4.npy", func, params, "DFS")
-
-    def benchmark_bfs(self):
-        func = self.tree_searcher.find_path_2
-        params = {"search_depth": 5,
-                  "epsilon": 0.1,
-                  "threshold": 0.01,
-                  "drop_percent": 0.25,
-                  "factor": 0.01}
-        self.benchmark("BenchmarkInstances/4x4.npy", func, params, "BFS")
-
     def benchmark_caserta(self):
         matrices = load_caserta(self.width, self.height)
-        function = self.tree_searcher.iterative_dfs
+        function = self.tree_searcher.find_path_dfs
         params = {"stop_param": 6, "k": 12}
         algorithm_type = "dfs"
 
@@ -133,11 +115,31 @@ class Benchmark(object):
         print(stop - start)
         print(num_steps)
 
+    def test_params(self):
+        params = [1,2,3,4,5]
+        k = 12
+
+        matrices = load_caserta(self.width, self.height)
+        function = self.tree_searcher.find_path_dfs
+
+        for p in params:
+            params = {"stop_param": p, "k": k}
+            times = []
+            steps = []
+
+            for i, m in enumerate(matrices):
+                if i > 1 and i % 10 == 0:
+                    print("Done with ", str(i))
+                start = time.time()
+                num_steps = len(function(m, **params))
+                stop = time.time()
+                times.append(stop - start)
+                steps.append(num_steps)
+            print("Param: " + str(p), "Steps: " + str(sum(steps)) + "Time: " + str(sum(times)))
+
+
 if __name__ == "__main__":
-    #bm = Benchmark()
-    #bm.benchmark_dfs()
-    #bm.benchmark_caserta()
+    bm = Benchmark()
+    bm.benchmark_caserta()
     #bm.test_performance(25)
-    ab = load_caserta(3, 3)
-    print(ab)
 

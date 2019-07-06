@@ -13,8 +13,10 @@ class TreeSearch:
         self.env = block_relocation
         self.index_to_moves_dict = {}
         self.best_path = []
-        self.seen_states = {}
-        self.std_vals = load_obj("4x4_std")
+        height = block_relocation.height
+        width = block_relocation.width
+        std = str(height) + "x" + str(width) + "_std"
+        self.std_vals = load_obj(std)
         self.total = 0
 
     def iterative_dfs(self, matrix, stop_param=1, cutoff_param=0.1, k=10, time_limit=10, max_steps=30):
@@ -69,7 +71,7 @@ class TreeSearch:
 
                 self.next_nodes.append((new_state, new_path))
 
-        while self.next_nodes and time.time() - self.start_time < 10:
+        while self.next_nodes and time.time() - self.start_time < time_limit:
             m, path = self.next_nodes.pop()
             dfs(matrix=m, current_path=path)
 
