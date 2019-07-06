@@ -47,16 +47,18 @@ def load_caserta(width, height):
     import os
     dir = os.path.dirname(__file__)
     filename = os.path.join(dir, 'OfficalBenchmarkInstances/CRPTestcases_Caserta')
-    starting_string = "data" + str(height) + "-" + str(width)
-    file_names = [fn for fn in os.listdir(filename) if fn.startswith(starting_string)]
+    starting_string = "data" + str(height) + "-" + str(width) + "-"
+    file_names = [starting_string + str(x) + ".dat" for x in range(1,41)]
 
     matrices = []
     for f in file_names:
         f = "OfficalBenchmarkInstances/CRPTestcases_Caserta/" + f
         matrices.append(load_benchmark_instances(f, height))
+
     return matrices
 
 
 if __name__ == "__main__":
-    load_caserta(4, 4)
-    load_benchmark_instances("OfficalBenchmarkInstances/CRPTestcases_Caserta/data4-4-9.dat", 4)
+    load_caserta(3,3)
+    a = load_benchmark_instances("OfficalBenchmarkInstances/CRPTestcases_Caserta/data3-3-1.dat", 3)
+    print(a)

@@ -134,8 +134,10 @@ class Benchmark(object):
         print(num_steps)
 
 if __name__ == "__main__":
-    bm = Benchmark()
+    #bm = Benchmark()
     #bm.benchmark_dfs()
     #bm.benchmark_caserta()
-    bm.test_performance(25)
+    #bm.test_performance(25)
+    ab = load_caserta(3, 3)
+    print(ab)
 

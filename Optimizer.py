@@ -237,7 +237,7 @@ class Optimizer:
         for ii in range(total_container-5, total_container):
             print("Currently training on: {ii} units.")
             bm = Benchmark()
-            bm.benchmark_dfs()
+            bm.benchmark_caserta()
             self.reinforce(iterations=10, units=ii)
             #self.train_and_update_models()
 
