@@ -15,8 +15,10 @@ class TreeSearch:
         self.best_path = []
         height = block_relocation.height
         width = block_relocation.width
-        std = str(height) + "x" + str(width) + "_std"
+        std = "Deviations/" + str(height-2) + "x" + str(width) + "_std"
+        print(std)
         self.std_vals = load_obj(std)
+        print(self.std_vals)
         self.total = 0
 
     def iterative_dfs(self, matrix, stop_param=1, cutoff_param=0.1, k=10, time_limit=10, max_steps=30):
@@ -340,7 +342,7 @@ if __name__ == "__main__":
     configs = load_configs("Configs.json")
     val = ValueNetwork(configs)
     pol = PolicyNetwork(configs)
-    test = TreeSearch(val, BlockRelocation(4, 4), pol)
+    test = TreeSearch(val, BlockRelocation(5, 5), pol)
     matrix = test.env.create_instance_random(10)
     print(matrix)
     print(test.find_path_2(matrix, search_depth=3))
