@@ -189,11 +189,10 @@ class Optimizer:
             end = time.time()
             print(end-start)
 
-
     def train_and_update_models(self):
         data = self.buffer.get_sample(size=self.buffer.max_size)
-        self.policy_net.train_df(data)
-        self.value_net.train_df(data)
+        self.policy_net.train_df(data, epochs=3, validation=False)
+        self.value_net.train_df(data, epochs=3, validation=False)
 
     def train_on_csv(self, filename):
         data = pd.read_csv(filename)
@@ -222,6 +221,9 @@ class Optimizer:
 
     def full_experiment(self):
         #self.train_on_csv(self.filename)
+
+        self.reinforce(iterations=1, units=8)
+        self.train_and_update_models()
 
         total_container = self.width * self.height
         for ii in range(23, 25):
