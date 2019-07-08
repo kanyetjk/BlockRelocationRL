@@ -183,7 +183,7 @@ class Optimizer:
             start = time.time()
             print("Iteration " + str(x))
             self.train_on_new_instances(50, units=units)
-            old_sample = self.buffer.get_sample(2000, remove=True)
+            old_sample = self.buffer.get_sample(2000, remove=False)
             self.policy_net.train_df(old_sample, epochs=1, validation=False)
             self.value_net.train_df(old_sample, epochs=1, validation=False)
             end = time.time()
