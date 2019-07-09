@@ -191,7 +191,9 @@ class Optimizer:
 
     def train_and_update_models(self):
         data = self.buffer.get_sample(size=self.buffer.max_size)
+        print("Training Policy Network ...")
         self.policy_net.train_df(data, epochs=3, validation=False)
+        print("Training Value Network ...")
         self.value_net.train_df(data, epochs=3, validation=False)
 
     def train_on_csv(self, filename):

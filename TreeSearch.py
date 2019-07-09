@@ -80,7 +80,8 @@ class TreeSearch:
         return self.best_path
 
 
-    def find_path_dfs(self, matrix, stop_param=1, k=6, time_limit=10, max_steps=30):
+    def find_path_dfs(self, matrix, stop_param=1, k=6, time_limit=10, max_steps=40,
+                      cutoff_param=0.0001):
         self.best_path = list(range(100))
         self.seen_states = {}
         self.start = time.time()
@@ -114,7 +115,7 @@ class TreeSearch:
             #print(sorted_output)
 
             for i in range(k):
-                if sorted_output.pop(0) < 0.001 or time.time() - self.start > 10:
+                if sorted_output.pop(0) < cutoff_param or time.time() - self.start > time_limit:
                     break
                 current_move = self.index_to_moves(sorted_moves.pop(0))
                 if not self.env.is_legal_move(current_move[0], current_move[1], matrix):
