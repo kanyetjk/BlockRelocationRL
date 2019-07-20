@@ -11,6 +11,7 @@ from Benchmark import Benchmark
 import numpy as np
 import pandas as pd
 import time
+import os.path
 #import logging
 
 
@@ -257,10 +258,11 @@ class Optimizer:
         start = time.time()
         for e in range(examples):
             if e % 500 == 0 and e > 0:
+                h = not os.path.isfile(filename)
                 final_df = pd.concat(data_list)
                 end = time.time()
                 with open(filename, 'a+') as f:
-                    final_df.to_csv(f, header=False, index=False)
+                    final_df.to_csv(f, header=h, index=False)
                 print(end - start)
 
                 start = time.time()
@@ -285,10 +287,10 @@ if __name__ == "__main__":
     #test.evaluate_parameters()
     #test.test_wrapper()
     #test.find_best_parameters()
-    test.full_experiment()
+    #test.full_experiment()
     #test.test_stupid_wrapper()
     #test.test_keras()
-    #test.produce_highq_data(filename="test.csv", examples=1000, perm=False)
+    test.produce_testing_data(filename="test_timo.csv", examples=1000, perm=False)
     #test.train_on_csv("up_to_8.csv")
     #test.test_deviations()
 
