@@ -68,7 +68,6 @@ class TreeSearch:
 
                 if self.env.is_solved(new_state):
                     if len(current_path) < len(self.best_path):
-                        self.start = time.time()
                         self.best_path = new_path
 
                 self.next_nodes.append((new_state, new_path))
@@ -133,7 +132,6 @@ class TreeSearch:
 
                 if self.env.is_solved(new_state):
                     if len(current_path) < len(self.best_path):
-                        self.start = time.time()
                         self.best_path = new_path
                 dfs(new_state, new_path)
 

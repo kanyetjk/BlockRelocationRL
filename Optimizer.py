@@ -224,11 +224,10 @@ class Optimizer:
     def full_experiment(self):
         #self.train_on_csv(self.filename)
 
-        self.reinforce(iterations=1, units=8)
-        self.train_and_update_models()
+
 
         total_container = self.width * self.height
-        for ii in range(23, 25):
+        for ii in range(21, 25):
             print("Training: Currently training on {} units.".format(ii))
             self.reinforce(iterations=10, units=ii)
             self.train_and_update_models()
@@ -253,14 +252,14 @@ class Optimizer:
         # find best parameters
         # run experiment on test instances
 
-    def produce_highq_data(self, filename, examples=10000, perm=True):
+    def produce_testing_data(self, filename, examples=10000, perm=False):
         data_list = []
         start = time.time()
         for e in range(examples):
             if e % 500 == 0 and e > 0:
                 final_df = pd.concat(data_list)
                 end = time.time()
-                with open(filename, 'a') as f:
+                with open(filename, 'a+') as f:
                     final_df.to_csv(f, header=False, index=False)
                 print(end - start)
 

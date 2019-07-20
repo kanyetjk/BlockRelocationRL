@@ -101,7 +101,11 @@ class BlockRelocation:
         while ii <= self.height - 1 and matrix[ii, second_pos] == 0:
             ii += 1
 
-        matrix[ii - 1, second_pos] = val
+        try:
+            matrix[ii - 1, second_pos] = val
+        except UnboundLocalError:
+            print(matrix)
+            print(first_pos, second_pos)
         while self.can_remove_matrix(matrix):
             matrix = self.remove_container_from_matrix(matrix)
 
