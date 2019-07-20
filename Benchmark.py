@@ -56,6 +56,7 @@ class Benchmark(object):
 
         # Overview of the benchmark run
         my_logger.info("=== Results of Benchmark ===")
+        my_logger.info("Date: {}".format(str(time.asctime())))
         my_logger.info("Function Type: {}".format(func_name))
         my_logger.info("Parameter: {}".format(params))
         my_logger.info("Total Time: {}".format(round(np.sum(times), 2)))
