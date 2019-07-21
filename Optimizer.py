@@ -62,13 +62,13 @@ class Optimizer:
 
         #logging.info("Start up process complete.")
 
-    def create_training_example(self, permutations=True, units=8, hq=False):
+    def create_training_example(self, permutations=True, units=8):
         if units < self.height * self.width:
             matrix = self.env.create_instance_random(units)
         else:
             matrix = self.env.create_instance(self.height, self.width)
 
-        if units < 5:
+        if units < 6:
             path = self.tree_searcher.find_path_2(matrix)
         else:
             path = self.tree_searcher.find_path_dfs(matrix.copy())
@@ -97,7 +97,6 @@ class Optimizer:
             data, steps = self.create_training_example(permutations=True, units=units)
             data_list.append(data)
             step_list.append(steps)
-            #print(steps)
 
         data = pd.concat(data_list, ignore_index=True, sort=False)
 
@@ -106,8 +105,7 @@ class Optimizer:
         with open(self.filename, 'a') as f:
             data.to_csv(f, header=False, index=False)
 
-        train_data = data.sample(int(data.shape[0] / 3))  # Hardcoded
-
+        train_data = data.sample(int(data.shape[0] / 3))
         self.value_net.train_df(train_data, epochs=1, validation=False)
         self.policy_net.train_df(train_data, epochs=1, validation=False)
 
@@ -178,24 +176,22 @@ class Optimizer:
         final_df = pd.concat(df_list, ignore_index=True)
         return final_df
 
-    def reinforce(self, iterations=20, units=12):
+    def reinforce(self, iterations=20, units=12, instances=50):
         print("Starting reinfoce with {} iterations and {} units.".format(iterations, units))
         for x in range(iterations):
             start = time.time()
-            print("Iteration " + str(x))
-            self.train_on_new_instances(50, units=units)
-            old_sample = self.buffer.get_sample(2000, remove=False)
-            self.policy_net.train_df(old_sample, epochs=1, validation=False)
-            self.value_net.train_df(old_sample, epochs=1, validation=False)
+            print("Iteration " + str(x+1))
+            self.train_on_new_instances(instances, units=units)
+
             end = time.time()
             print(end-start)
 
-    def train_and_update_models(self):
+    def train_and_update_models(self, epochs=3):
         data = self.buffer.get_sample(size=self.buffer.max_size)
         print("Training Policy Network ...")
-        self.policy_net.train_df(data, epochs=3, validation=False)
+        self.policy_net.train_df(data, epochs=epochs, validation=False)
         print("Training Value Network ...")
-        self.value_net.train_df(data, epochs=3, validation=False)
+        self.value_net.train_df(data, epochs=epochs, validation=False)
 
     def train_on_csv(self, filename):
         data = pd.read_csv(filename)
@@ -223,32 +219,32 @@ class Optimizer:
         print("Training finished!")
 
     def full_experiment(self):
-        #self.train_on_csv(self.filename)
-
-
-
         total_container = self.width * self.height
-        for ii in range(21, 25):
+        for ii in range(5, total_container-5):
             print("Training: Currently training on {} units.".format(ii))
             self.reinforce(iterations=10, units=ii)
+            if ii % 3 == 0:
+                data = self.buffer.get_sample(self.buffer.size, remove=True)
+                self.policy_net.retrain_model(data)
+                self.value_net.retrain_model(data)
+                self.buffer.increase_max_size(0.1)
             self.train_and_update_models()
 
-        for ii in range(total_container-5, total_container):
+        for ii in range(total_container-5, total_container+1):
             print("Currently training on: {ii} units.")
-            bm = Benchmark()
-            bm.benchmark_caserta()
-            self.reinforce(iterations=10, units=ii)
-            #self.train_and_update_models()
+            self.reinforce(iterations=20, units=ii)
 
-
-        #self.buffer.storage.to_csv("4x4_data_first_half.csv", index=False)
-        self.buffer = Buffer(self.buffer_size)
+            data = self.buffer.get_sample(self.buffer.size, remove=True)
+            self.policy_net.retrain_model(data)
+            self.value_net.retrain_model(data)
+            self.buffer.increase_max_size(0.1)
 
         for ii in range(10):
             print("Training with all units. Currently on iteration ", str(ii+1))
             bm = Benchmark()
             bm.benchmark_caserta()
             self.reinforce(iterations=10, units=self.height*self.width)
+            self.train_and_update_models()
 
         # find best parameters
         # run experiment on test instances
@@ -268,7 +264,7 @@ class Optimizer:
                 start = time.time()
                 data_list = []
 
-            data, length = self.create_training_example(permutations=perm, units=16)
+            data, length = self.create_training_example(permutations=perm, units=self.height*self.width)
             data_list.append(data)
 
         # in case number is not divisible by 500

@@ -2,8 +2,10 @@ from keras.models import Model, load_model
 from keras.layers import Dense, Input, Concatenate, Lambda, regularizers, LeakyReLU, Softmax
 from keras.optimizers import Adam
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
+from sklearn.model_selection import train_test_split
 
 import numpy as np
+import pandas as pd
 
 
 class KerasModel(object):
@@ -38,6 +40,16 @@ class KerasModel(object):
         self.early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=0, mode='auto',
                                             baseline=None, restore_best_weights=True)
 
+    def reset_model(self):
+        self.model = self.build_model()
+
+    def retrain_model(self, data):
+        self.reset_model()
+        self.train_experiment(data)
+
+    def train_experiment(self, data):
+        pass
+
     def build_model(self):
         pass
 
@@ -56,6 +68,19 @@ class KerasModel(object):
         max_val = (self.height - 2) * self.width
         x_data = np.array([matrix.transpose().flatten() / max_val])
         return self.model.predict(x_data)[0]
+
+    @staticmethod
+    def load_file(filename):
+        data = pd.read_csv(filename)
+        print(data.shape)
+        data["StateRepresentation"] = data["StateRepresentation"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
+        data["MovesEncoded"] = data["MovesEncoded"].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
+
+        data["hashed"] = data["StateRepresentation"].apply(lambda s: s.tostring())
+        data = data.drop_duplicates(subset="hashed")
+        data = data.drop(columns=["hashed"])
+        data = data.reset_index(drop=True)
+        return data
 
 
 class ValueNetworkKeras(KerasModel):
@@ -144,7 +169,7 @@ class ValueNetworkKeras(KerasModel):
                        shuffle=True,
                        callbacks=[self.tensorboard, self.saver, self.early_stopping],
                        validation_split=0.1,
-                       verbose=0)
+                       verbose=1)
 
     def eval(self, data):
         max_val = (self.height - 2) * self.width
@@ -238,6 +263,24 @@ class PolicyNetworkKeras(KerasModel):
                        validation_split=validation_split,
                        verbose=0)
 
+    def train_experiment(self, data, epochs=None, validation=True):
+        # preparing data
+        max_val = (self.height - 2) * self.width
+        x_data = data.StateRepresentation.values
+        x_data = np.array([x / max_val for x in x_data])
+
+        y = data.MovesEncoded
+        y = np.array([np.array(val, dtype=float) for val in y])
+
+        # fit the model
+        self.model.fit(x_data, y,
+                       batch_size=self.batch_size,
+                       epochs=50,
+                       shuffle=True,
+                       callbacks=[self.tensorboard, self.saver, self.early_stopping],
+                       validation_split=0.1,
+                       verbose=1)
+
     def eval(self, data):
         max_val = (self.height - 2) * self.width
         x_data = data.StateRepresentation.values
@@ -248,3 +291,29 @@ class PolicyNetworkKeras(KerasModel):
 
         return self.model.evaluate(x_data, y,
                                    batch_size=256)
+
+
+class ModelExperiment:
+    def __init__(self):
+        self.filename = "abc"
+        configs = {}
+        self.policy_network = PolicyNetworkKeras(configs)
+        self.value_network = ValueNetworkKeras(configs)
+
+    def run_experiment(self):
+        data = KerasModel.load_file(self.filename)
+        train_data, test_data = train_test_split(data, shuffle=True, test_size=0.15)
+
+        # try policy network
+        self.policy_network.train_experiment(train_data)
+        # TODO LOG
+        self.policy_network.eval(test_data)
+
+        # try value network
+        self.value_network.train_experiment(train_data)
+        # TODO LOG
+        self.value_network.eval(test_data)
+
+
+if __name__ == "__main__":
+    test = ModelExperiment()
