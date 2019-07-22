@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 
 import numpy as np
 import pandas as pd
+import argparse
 
 
 class KerasModel(object):
@@ -316,4 +317,24 @@ class ModelExperiment:
 
 
 if __name__ == "__main__":
-    test = ModelExperiment()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--height", type=int)
+    parser.add_argument("--width", type=int)
+    parser.add_argument("--shared_weights1", type=int)
+    parser.add_argument("--shared_weights2", type=int)
+    parser.add_argument("--fully1", type=int)
+    parser.add_argument("--fully2", type=int)
+    parser.add_argument("--fully3", type=int)
+    parser.add_argument("--fully4", type=int)
+    args = parser.parse_args()
+
+    configs = {
+        "shared_weights": [args.fully1, args.fully2, args.fully3, args.fully4],
+        "connected_weights": [args.fully1, args.fully2, args.fully3, args.fully4],
+        "learning_rate": 0.001,
+        "batch_size": 512,
+        "num_epochs": 100,
+        "width": args.width,
+        "height": args.height + 2
+    }
+    test = ModelExperiment(configs)

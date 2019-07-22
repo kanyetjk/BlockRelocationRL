@@ -16,10 +16,12 @@ class TreeSearch:
         height = block_relocation.height
         width = block_relocation.width
         std = "Deviations/" + str(height-2) + "x" + str(width) + "_std"
-        print(std)
         self.std_vals = load_obj(std)
-        print(self.std_vals)
         self.total = 0
+
+        # DFS Helpes
+        self.seen_states = {}
+        self.start = time.time()
 
     def iterative_dfs(self, matrix, stop_param=1, cutoff_param=0.1, k=10, time_limit=10, max_steps=30):
         self.best_path = list(range(100))
@@ -78,24 +80,20 @@ class TreeSearch:
 
         return self.best_path
 
-
     def find_path_dfs(self, matrix, stop_param=1, k=6, time_limit=10, max_steps=40,
-                      cutoff_param=0.0001):
+                      cutoff_param=0.001, cutoff_increase=1):
         self.best_path = list(range(100))
         self.seen_states = {}
         self.start = time.time()
         while self.env.can_remove_matrix(matrix):
             matrix = self.env.remove_container_from_matrix(matrix)
 
-        def dfs(matrix, current_path):
+        def dfs(matrix, current_path, cutoff=cutoff_param):
             self.end = time.time()
 
             if self.end - self.start > time_limit:
-                #print("Time Limit Up")
-                #print(self.end - self.start)
                 return
             if len(current_path) > max_steps:
-                #print("Path Too Long")
                 return
 
             predicted_moves = self.model.predict_single(matrix)[0]
@@ -111,7 +109,6 @@ class TreeSearch:
             placeholder = list(range(len(moves_pred)))
             sorted_moves = [x for _, x in sorted(zip(moves_pred, placeholder), reverse=True)]
             sorted_output = sorted(moves_pred, reverse=True)
-            #print(sorted_output)
 
             for i in range(k):
                 if sorted_output.pop(0) < cutoff_param or time.time() - self.start > time_limit:
@@ -133,14 +130,13 @@ class TreeSearch:
                 if self.env.is_solved(new_state):
                     if len(current_path) < len(self.best_path):
                         self.best_path = new_path
-                dfs(new_state, new_path)
+                new_cutoff = min(cutoff*cutoff_increase, 0.4)
+                dfs(new_state, new_path, new_cutoff)
 
         dfs(matrix, [])
         if len(self.best_path) == 100:
             return []
-        end = time.time()
-        self.total += (end-self.start)
-        #print(self.total)
+
         return self.best_path
 
     def find_path_2(self, matrix, search_depth=4, epsilon=0.3, threshold=0.1, drop_percent=0.6, factor=0.1):
@@ -255,38 +251,6 @@ class TreeSearch:
 
         self.index_to_moves_dict[position_in_vector] = (first_pos, second_pos)
         return first_pos, second_pos
-
-    def find_path(self, matrix, search_depth=4, moves_per_turn=2):
-        # TODO Handle solved
-
-        self.env.matrix = matrix
-        while self.env.can_remove_matrix(matrix):
-            matrix = self.env.remove_container_from_matrix(matrix)
-        path = []
-
-        counter = 0
-        while not self.env.is_solved(matrix=matrix):
-            if counter > 20:
-                return
-
-            # predicting values of the states
-            possible_next_states = self.env.all_next_states_n_moves(depth=search_depth, matrix=matrix)
-            values = list(self.model.predict_df(possible_next_states))
-            values = [x[0] for x in values]
-
-            possible_next_states["StateValue"] = values
-
-            best_row_index = possible_next_states.StateValue.idxmax()
-            best_row = possible_next_states.loc[best_row_index, :]
-            for x in range(min(moves_per_turn, len(best_row.Move))):
-                counter += 1
-                if not self.env.is_solved(matrix=matrix):
-                    path.append(best_row.Move[x])
-                    print(matrix)
-                    # print(best_row.Move[x])
-                    matrix = self.env.move_on_matrix(matrix, *best_row.Move[x])
-
-        return path
 
     @lru_cache(maxsize=900)
     def move_to_hot_one_encoding(self, move):
