@@ -89,12 +89,12 @@ class Optimizer:
 
         return data, len(path)
 
-    def train_on_new_instances(self, num=1, units=10):
+    def train_on_new_instances(self, num=1, units=10, perm=False):
         data_list = []
         step_list = []
 
         for ii in range(num):
-            data, steps = self.create_training_example(permutations=True, units=units)
+            data, steps = self.create_training_example(permutations=perm, units=units)
             data_list.append(data)
             step_list.append(steps)
 
@@ -102,8 +102,8 @@ class Optimizer:
 
         self.calculate_deviations(data)
 
-        with open(self.filename, 'a') as f:
-            data.to_csv(f, header=False, index=False)
+        #with open(self.filename, 'a') as f:
+        #    data.to_csv(f, header=False, index=False)
 
         train_data = data.sample(int(data.shape[0] / 3))
         self.value_net.train_df(train_data, epochs=1, validation=False)
@@ -134,11 +134,11 @@ class Optimizer:
         return old_vals
 
     def test_deviations(self):
-        for i in range(10):
-            data, steps = self.create_training_example(units=11)
+        for i in range(20):
+            data, steps = self.create_training_example(units=9)
             print(steps)
         print("DONE")
-        #print(self.calculate_deviations(data))
+        print(self.calculate_deviations(data))
 
 
     def prepare_data_for_model(self, data):
@@ -176,7 +176,7 @@ class Optimizer:
         final_df = pd.concat(df_list, ignore_index=True)
         return final_df
 
-    def reinforce(self, iterations=20, units=12, instances=50):
+    def reinforce(self, iterations=20, units=12, instances=200):
         print("Starting reinfoce with {} iterations and {} units.".format(iterations, units))
         for x in range(iterations):
             start = time.time()
@@ -222,19 +222,21 @@ class Optimizer:
         total_container = self.width * self.height
         for ii in range(5, total_container-5):
             print("Training: Currently training on {} units.".format(ii))
-            self.reinforce(iterations=10, units=ii)
+            self.reinforce(iterations=10, units=ii, instances=1000)
             if ii % 3 == 0:
-                data = self.buffer.get_sample(self.buffer.size, remove=True)
+                data = self.buffer.get_sample(self.buffer.max_size, remove=True)
                 self.policy_net.retrain_model(data)
                 self.value_net.retrain_model(data)
                 self.buffer.increase_max_size(0.1)
-            self.train_and_update_models()
+                self.calculate_deviations()
+            else:
+                self.train_and_update_models()
 
         for ii in range(total_container-5, total_container+1):
             print("Currently training on: {ii} units.")
-            self.reinforce(iterations=20, units=ii)
+            self.reinforce(iterations=20, units=ii, instances=1000)
 
-            data = self.buffer.get_sample(self.buffer.size, remove=True)
+            data = self.buffer.get_sample(self.buffer.max_size, remove=True)
             self.policy_net.retrain_model(data)
             self.value_net.retrain_model(data)
             self.buffer.increase_max_size(0.1)
@@ -275,6 +277,7 @@ class Optimizer:
 
 if __name__ == "__main__":
     test = Optimizer()
+    test.full_experiment()
     #test.test_combinded_model()
     #test.reinforce(10)
     #test.test_value_network()
@@ -283,7 +286,8 @@ if __name__ == "__main__":
     #test.evaluate_parameters()
     #test.test_wrapper()
     #test.find_best_parameters()
-    test.full_experiment()
+    #test.test_deviations()
+    #test.full_experiment()
     #test.test_stupid_wrapper()
     #test.test_keras()
     #test.produce_testing_data(filename="test_timo.csv", examples=1000, perm=False)

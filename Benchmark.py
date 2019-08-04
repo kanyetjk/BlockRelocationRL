@@ -128,7 +128,7 @@ class Benchmark(object):
         k_param = [x for x in range(5, 20)]
         stop = [x for x in range(0, 6)]
 
-        matrices = [self.env.create_instance_random(15) for _ in range(10)]
+        matrices = [self.env.create_instance_random(10) for _ in range(100)]
         function = self.tree_searcher.find_path_dfs
 
         for x in range(10):
@@ -138,7 +138,7 @@ class Benchmark(object):
 
             start = time.time()
             for i, m in enumerate(matrices):
-                num_steps = len(function(m, k=k, stop_param=s, time_limit=8))
+                num_steps = len(function(m, k=k, stop_param=s, time_limit=5))
                 steps += num_steps
                 if steps > mi:
                     continue
@@ -161,7 +161,7 @@ class Benchmark(object):
                 best_k = k
                 best_s = s
 
-        print(mi, time, best_k, best_s)
+        print(mi, t, best_k, best_s)
 
         return best_k, best_s
 
@@ -175,6 +175,6 @@ class Benchmark(object):
 if __name__ == "__main__":
     bm = Benchmark()
     #bm.benchmark_caserta()
-    bm.test_performance(18)
-    #bm.test_params()
+    #bm.test_performance(18)
+    bm.test_params()
 

@@ -1,8 +1,8 @@
 {
   "width": 5,
-  "height": 5,
+  "height": 4,
   "data_filename": "5x5_first_run.csv",
-  "val_filename": "5x5_std",
+  "val_filename": "5x4_std",
 
   "buffer_size": 2000000,
   "buffer_increase": 0.02,

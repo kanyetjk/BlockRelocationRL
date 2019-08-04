@@ -1,6 +1,6 @@
 {
   "width": 5,
-  "height": 5,
+  "height": 4,
 
   "buffer_size": 20000,
   "buffer_increase": 0.02,

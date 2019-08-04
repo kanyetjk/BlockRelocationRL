@@ -145,7 +145,7 @@ class TreeSearch:
 
         return self.best_path
 
-    def find_path_2(self, matrix, search_depth=4, epsilon=0.03, threshold=0.02, drop_percent=0.6, factor=0.1):
+    def find_path_2(self, matrix, search_depth=4, epsilon=0.03, threshold=0.01, drop_percent=0.6, factor=0.1):
         # BFS
         self.env.matrix = matrix
         while self.env.can_remove_matrix(matrix):
