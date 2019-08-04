@@ -295,9 +295,8 @@ class PolicyNetworkKeras(KerasModel):
 
 
 class ModelExperiment:
-    def __init__(self):
-        self.filename = "abc"
-        configs = {}
+    def __init__(self, configs):
+        self.filename = "3x3"
         self.policy_network = PolicyNetworkKeras(configs)
         self.value_network = ValueNetworkKeras(configs)
 
@@ -328,7 +327,7 @@ if __name__ == "__main__":
     parser.add_argument("--fully4", type=int)
     args = parser.parse_args()
 
-    configs = {
+    configs1 = {
         "shared_weights": [args.fully1, args.fully2, args.fully3, args.fully4],
         "connected_weights": [args.fully1, args.fully2, args.fully3, args.fully4],
         "learning_rate": 0.001,
@@ -337,4 +336,4 @@ if __name__ == "__main__":
         "width": args.width,
         "height": args.height + 2
     }
-    test = ModelExperiment(configs)
+    test = ModelExperiment(configs1)

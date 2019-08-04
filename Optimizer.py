@@ -283,10 +283,10 @@ if __name__ == "__main__":
     #test.evaluate_parameters()
     #test.test_wrapper()
     #test.find_best_parameters()
-    #test.full_experiment()
+    test.full_experiment()
     #test.test_stupid_wrapper()
     #test.test_keras()
-    test.produce_testing_data(filename="test_timo.csv", examples=1000, perm=False)
+    #test.produce_testing_data(filename="test_timo.csv", examples=1000, perm=False)
     #test.train_on_csv("up_to_8.csv")
     #test.test_deviations()
 

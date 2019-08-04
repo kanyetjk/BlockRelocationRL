@@ -18,10 +18,12 @@ class TreeSearch:
         std = "Deviations/" + str(height-2) + "x" + str(width) + "_std"
         self.std_vals = load_obj(std)
         self.total = 0
+        self.possible_moves = width * (width-1)
 
         # DFS Helpes
         self.seen_states = {}
         self.start = time.time()
+        self.k = 20
 
     def iterative_dfs(self, matrix, stop_param=1, cutoff_param=0.1, k=10, time_limit=10, max_steps=30):
         self.best_path = list(range(100))
@@ -81,14 +83,19 @@ class TreeSearch:
         return self.best_path
 
     def find_path_dfs(self, matrix, stop_param=1, k=6, time_limit=10, max_steps=40,
-                      cutoff_param=0.001, cutoff_increase=1):
+                      cutoff_param=0.001, cutoff_increase=1, dynamic_k=False):
         self.best_path = list(range(100))
         self.seen_states = {}
         self.start = time.time()
+        self.k = k
         while self.env.can_remove_matrix(matrix):
             matrix = self.env.remove_container_from_matrix(matrix)
 
         def dfs(matrix, current_path, cutoff=cutoff_param):
+            if dynamic_k:
+                new_k = matrix.max()
+                self.k = min(new_k, self.possible_moves)
+
             self.end = time.time()
 
             if self.end - self.start > time_limit:
@@ -109,8 +116,7 @@ class TreeSearch:
             placeholder = list(range(len(moves_pred)))
             sorted_moves = [x for _, x in sorted(zip(moves_pred, placeholder), reverse=True)]
             sorted_output = sorted(moves_pred, reverse=True)
-
-            for i in range(k):
+            for i in range(self.k):
                 if sorted_output.pop(0) < cutoff_param or time.time() - self.start > time_limit:
                     break
                 current_move = self.index_to_moves(sorted_moves.pop(0))
@@ -139,7 +145,7 @@ class TreeSearch:
 
         return self.best_path
 
-    def find_path_2(self, matrix, search_depth=4, epsilon=0.3, threshold=0.1, drop_percent=0.6, factor=0.1):
+    def find_path_2(self, matrix, search_depth=4, epsilon=0.03, threshold=0.02, drop_percent=0.6, factor=0.1):
         # BFS
         self.env.matrix = matrix
         while self.env.can_remove_matrix(matrix):
@@ -159,9 +165,9 @@ class TreeSearch:
                 print("No paths found")
                 return []
 
-            if counter > 20:
+            if counter > 40:
                 print("Too many steps")
-                return range(20)
+                return range(40)
 
             counter += 1
             policy = self.policy_network.predict_df(data)
@@ -216,7 +222,7 @@ class TreeSearch:
                 data["StateValue"] = values
 
                 num_rows = int(data.shape[0] * (1-drop_percent))
-                num_rows = max(10, num_rows)
+                num_rows = max(1000, num_rows)
                 data = data.nlargest(num_rows, "StateValue")
         #print(matrix)
 

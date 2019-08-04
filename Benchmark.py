@@ -98,16 +98,7 @@ class Benchmark(object):
         self.log_results(times, steps, algorithm_type, params)
 
     def test_performance(self, units):
-        matrices = [self.env.create_instance_random(units) for _ in range(5)]
-
-        start = time.time()
-        num_steps = 0
-        for m in matrices:
-            print("abc")
-            num_steps += len(self.tree_searcher.find_path_dfs(m, stop_param=2, k=15, cutoff_param=0.002))
-        stop = time.time()
-        print(stop-start)
-        print(num_steps)
+        matrices = [self.env.create_instance_random(units) for _ in range(10)]
 
         start = time.time()
         num_steps = 0
@@ -119,31 +110,71 @@ class Benchmark(object):
         print(stop - start)
         print(num_steps)
 
-    def test_params(self):
-        params = [1,2,3,4,5]
-        k = 12
+        start = time.time()
+        num_steps = 0
+        for m in matrices:
+            print("abc")
+            num_steps += len(self.tree_searcher.find_path_dfs(m, stop_param=2, k=15, cutoff_increase=1.4,
+                                                              cutoff_param=0.002, dynamic_k=True))
+        stop = time.time()
+        print(stop - start)
+        print(num_steps)
 
-        matrices = load_caserta(self.width, self.height)
+    def test_params(self):
+        mi = 1000
+        t= 100
+        best_k = None
+        best_s = None
+        k_param = [x for x in range(5, 20)]
+        stop = [x for x in range(0, 6)]
+
+        matrices = [self.env.create_instance_random(15) for _ in range(10)]
         function = self.tree_searcher.find_path_dfs
 
-        for p in params:
-            params = {"stop_param": p, "k": k}
-            times = []
-            steps = []
+        for x in range(10):
+            k = np.random.choice(k_param)
+            s = np.random.choice(stop)
+            steps = 0
 
+            start = time.time()
             for i, m in enumerate(matrices):
-                if i > 1 and i % 10 == 0:
-                    print("Done with ", str(i))
-                start = time.time()
-                num_steps = len(function(m, **params))
-                stop = time.time()
-                times.append(stop - start)
-                steps.append(num_steps)
-            print("Param: " + str(p), "Steps: " + str(sum(steps)) + "Time: " + str(sum(times)))
+                num_steps = len(function(m, k=k, stop_param=s, time_limit=8))
+                steps += num_steps
+                if steps > mi:
+                    continue
+            end = time.time()
+            total = end-start
+
+            print("Steps", steps)
+            print("Time", end-start)
+            print("K", k)
+            print("S", s)
+
+            if steps < mi:
+                mi = steps
+                t = total
+                best_k = k
+                best_s = s
+            elif steps == mi and total < t:
+                mi = steps
+                t = total
+                best_k = k
+                best_s = s
+
+        print(mi, time, best_k, best_s)
+
+        return best_k, best_s
+
+
+
+
+
+
 
 
 if __name__ == "__main__":
     bm = Benchmark()
     #bm.benchmark_caserta()
-    bm.test_performance(20)
+    bm.test_performance(18)
+    #bm.test_params()
 
