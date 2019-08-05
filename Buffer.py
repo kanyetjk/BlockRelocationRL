@@ -59,3 +59,12 @@ class Buffer:
         """
         self.storage = self.storage.append(df, ignore_index=True, sort=False)
         self.resize()
+
+    def remove_duplicates(self):
+        before = self.storage.shape[0]
+        self.storage["hashed"] = self.storage["StateRepresentation"].apply(lambda s: s.tostring())
+        self.storage = self.storage.drop_duplicates("hashed", keep="last")
+        self.storage.drop(columns=["hashed"])
+        after = self.storage.shape[0]
+        diff = before-after
+        print("Duplicates removed from DF: ", str(diff))

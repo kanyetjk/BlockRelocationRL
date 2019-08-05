@@ -166,7 +166,7 @@ class ValueNetworkKeras(KerasModel):
         # fit the model
         self.model.fit(x_data, y,
                        batch_size=self.batch_size,
-                       epochs=50,
+                       epochs=100,
                        shuffle=True,
                        callbacks=[self.tensorboard, self.saver, self.early_stopping],
                        validation_split=0.1,
@@ -276,7 +276,7 @@ class PolicyNetworkKeras(KerasModel):
         # fit the model
         self.model.fit(x_data, y,
                        batch_size=self.batch_size,
-                       epochs=50,
+                       epochs=100,
                        shuffle=True,
                        callbacks=[self.tensorboard, self.saver, self.early_stopping],
                        validation_split=0.1,
@@ -296,7 +296,7 @@ class PolicyNetworkKeras(KerasModel):
 
 class ModelExperiment:
     def __init__(self, configs):
-        self.filename = "3x3"
+        self.filename = configs["filename"]
         self.policy_network = PolicyNetworkKeras(configs)
         self.value_network = ValueNetworkKeras(configs)
 
@@ -325,6 +325,7 @@ if __name__ == "__main__":
     parser.add_argument("--fully2", type=int)
     parser.add_argument("--fully3", type=int)
     parser.add_argument("--fully4", type=int)
+    parser.add_argument("--filename", type=str)
     args = parser.parse_args()
 
     configs1 = {
@@ -332,8 +333,9 @@ if __name__ == "__main__":
         "connected_weights": [args.fully1, args.fully2, args.fully3, args.fully4],
         "learning_rate": 0.001,
         "batch_size": 512,
-        "num_epochs": 100,
+        "num_epochs": 150,
         "width": args.width,
-        "height": args.height + 2
+        "height": args.height + 2,
+        "filename": args.filename
     }
     test = ModelExperiment(configs1)

@@ -82,8 +82,8 @@ class TreeSearch:
 
         return self.best_path
 
-    def find_path_dfs(self, matrix, stop_param=1, k=6, time_limit=10, max_steps=40,
-                      cutoff_param=0.001, cutoff_increase=1, dynamic_k=False):
+    def find_path_dfs(self, matrix, stop_param=1, k=15, time_limit=10, max_steps=40,
+                      cutoff_param=0.002, cutoff_increase=1, dynamic_k=False):
         self.best_path = list(range(100))
         self.seen_states = {}
         self.start = time.time()
