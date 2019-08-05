@@ -69,7 +69,7 @@ class Optimizer:
             matrix = self.env.create_instance(self.height, self.width)
 
         if units < 6:
-            path = self.tree_searcher.find_path_dfs(matrix, cutoff_param=0)
+            path = self.tree_searcher.find_path_2(matrix.copy())
         else:
             path = self.tree_searcher.find_path_dfs(matrix.copy())
 
@@ -89,7 +89,7 @@ class Optimizer:
 
         return data, len(path)
 
-    def train_on_new_instances(self, num=1, units=10, perm=False):
+    def train_on_new_instances(self, num=1, units=10, perm=False, train=False):
         data_list = []
         step_list = []
         for ii in range(num):
@@ -103,10 +103,10 @@ class Optimizer:
 
         #with open(self.filename, 'a') as f:
         #    data.to_csv(f, header=False, index=False)
-
-        #train_data = data.sample(int(data.shape[0] / 3))
-        #self.value_net.train_df(train_data, epochs=1, validation=False)
-        #self.policy_net.train_df(train_data, epochs=1, validation=False)
+        if train:
+            train_data = data.sample(int(data.shape[0] / 3))
+            self.value_net.train_df(train_data, epochs=2, validation=False)
+            self.policy_net.train_df(train_data, epochs=2, validation=False)
 
         self.buffer.append(data)
 
@@ -175,17 +175,17 @@ class Optimizer:
         final_df = pd.concat(df_list, ignore_index=True)
         return final_df
 
-    def reinforce(self, iterations=20, units=12, instances=200):
-        print("Starting reinfoce with {} iterations and {} units.".format(iterations, units))
+    def reinforce(self, iterations=20, units=12, instances=200, train=False):
+        print("Starting reinforce with {} iterations and {} units.".format(iterations, units))
+        start = time.time()
         for x in range(iterations):
-            start = time.time()
             print("Iteration " + str(x+1))
-            self.train_on_new_instances(instances, units=units)
+            self.train_on_new_instances(instances, units=units, train=train)
 
-            end = time.time()
-            print(end-start)
-            with open("duration.txt", 'a+') as f:
-                f.write(str(units) + "  " + str(iterations*instances) + "  " +  str(end-start))
+        end = time.time()
+        print(end-start)
+        with open("duration.txt", 'a+') as f:
+            f.write(str(units) + "  " + str(iterations*instances) + "  " + str(end-start) + "\n")
 
     def train_and_update_models(self, epochs=20):
         data = self.buffer.get_sample(size=self.buffer.max_size)
@@ -221,8 +221,11 @@ class Optimizer:
 
     def full_experiment(self):
         total_container = self.width * self.height
-        """
-        for ii in range(14, total_container-5):
+        for ii in range(5):
+            self.reinforce(iterations=5, units=5, instances=200, train=True)
+            self.train_and_update_models()
+
+        for ii in range(6, total_container-5):
             print("Training: Currently training on {} units.".format(ii))
             self.reinforce(iterations=20, units=ii, instances=2000)
             self.buffer.remove_duplicates()
@@ -233,10 +236,10 @@ class Optimizer:
                 self.buffer.increase_max_size(0.1)
             else:
                 self.train_and_update_models()
-        """
-        for ii in range(total_container-3, total_container+1):
+
+        for ii in range(total_container-5, total_container+1):
             print("Training: Currently training on {} units.".format(ii))
-            self.reinforce(iterations=30, units=ii, instances=2000)
+            self.reinforce(iterations=20, units=ii, instances=2000)
             self.buffer.remove_duplicates()
             data = self.buffer.get_sample(self.buffer.max_size, remove=False)
             self.policy_net.retrain_model(data)
