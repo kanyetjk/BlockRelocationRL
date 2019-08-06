@@ -1,10 +1,10 @@
 {
-  "width": 5,
+  "width": 6,
   "height": 4,
   "data_filename": "5x5_first_run.csv",
-  "val_filename": "5x4_std",
+  "val_filename": "6x4_std",
 
-  "buffer_size": 2000000,
+  "buffer_size": 1500000,
   "buffer_increase": 0.02,
 
   "simulations_per_training": 20,

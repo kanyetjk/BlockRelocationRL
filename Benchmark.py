@@ -78,7 +78,7 @@ class Benchmark(object):
     def benchmark_caserta(self):
         matrices = load_caserta(self.width, self.height)
         function = self.tree_searcher.find_path_dfs
-        params = {"stop_param": 1, "k": 12}
+        params = {"stop_param": 1, "k": 17, "cutoff_param": 0.001, "time_limit": 20}
         algorithm_type = "dfs"
 
         times = []

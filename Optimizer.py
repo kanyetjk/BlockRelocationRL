@@ -234,6 +234,7 @@ class Optimizer:
                 self.policy_net.retrain_model(data)
                 self.value_net.retrain_model(data)
                 self.buffer.increase_max_size(0.1)
+                del data
             else:
                 self.train_and_update_models()
 
@@ -241,7 +242,7 @@ class Optimizer:
             print("Training: Currently training on {} units.".format(ii))
             self.reinforce(iterations=20, units=ii, instances=2000)
             self.buffer.remove_duplicates()
-            data = self.buffer.get_sample(self.buffer.max_size, remove=False)
+            data = self.buffer.storage
             self.policy_net.retrain_model(data)
             self.value_net.retrain_model(data)
             self.buffer.increase_max_size(0.1)
